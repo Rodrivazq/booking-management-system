@@ -1,0 +1,73 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("user")
+  funcNumber   String   @unique
+  phoneNumber  String?
+  photoUrl     String?
+  preferences  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reservations  Reservation[]
+  passwordResets PasswordReset[]
+}
+
+model Settings {
+  id                  Int     @id @default(1)
+  companyName         String  @default("Sistema de Reservas Corporativo")
+  logoUrl             String?
+  primaryColor        String? @default("#16a34a")
+  secondaryColor      String? @default("#1e293b")
+  deadlineDay         Int     @default(3)
+  deadlineTime        String  @default("23:59")
+  supportEmail        String?
+  supportPhone        String?
+  welcomeTitle        String?
+  welcomeMessage      String?
+  loginBackgroundImage String?
+  maintenanceMode     Boolean @default(false)
+  announcementMessage String?
+  announcementType    String? @default("info")
+}
+
+model WeeklyMenu {
+  id             String  @id @default(uuid())
+  weekStart      String  @unique
+  days           String
+  breadAvailable Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Reservation {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  weekStart   String
+  timeSlot    String
+  selections  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PasswordReset {
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

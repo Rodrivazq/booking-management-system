@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "id": "uuid-placeholder",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "passwordHash": "hashed_password_placeholder",
+      "role": "user",
+      "funcNumber": "12345",
+      "phoneNumber": "555-0123",
+      "photoUrl": ""
+    }
+  ],
+  "reservations": [],
+  "weeklyMenus": []
+}

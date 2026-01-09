@@ -1,0 +1,83 @@
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import prisma from '../utils/prisma';
+
+export const updateUserDetails = async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { funcNumber, email, phoneNumber } = req.body || {};
+
+    try {
+        // Check for conflicts
+        if (funcNumber) {
+            const exists = await prisma.user.findFirst({
+                where: {
+                    funcNumber: String(funcNumber).trim(),
+                    NOT: { id: userId }
+                }
+            });
+            if (exists) return res.status(400).json({ error: 'Numero de funcionario ya asignado a otro usuario' });
+        }
+
+        if (email) {
+            const exists = await prisma.user.findFirst({
+                where: {
+                    email: String(email).trim(),
+                    NOT: { id: userId }
+                }
+            });
+            if (exists) return res.status(400).json({ error: 'Correo ya registrado por otro usuario' });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                ...(funcNumber && { funcNumber: String(funcNumber).trim() }),
+                ...(email && { email: String(email).trim() }),
+                ...(phoneNumber && { phoneNumber: String(phoneNumber).trim() })
+            }
+        });
+
+        res.json({ ok: true, user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, funcNumber: updatedUser.funcNumber, phoneNumber: updatedUser.phoneNumber } });
+    } catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({ error: 'Error al actualizar usuario' });
+    }
+};
+
+export const createUser = async (req: Request, res: Response) => {
+    const { name, email, password, funcNumber, phoneNumber, role } = req.body || {};
+    const creatorRole = req.user.role;
+
+    if (!name || !email || !password || !funcNumber) return res.status(400).json({ error: 'Faltan datos obligatorios' });
+
+    // Role validation
+    if (role === 'superadmin' && creatorRole !== 'superadmin') {
+        return res.status(403).json({ error: 'Solo Super Admins pueden crear otros Super Admins' });
+    }
+
+    try {
+        const exists = await prisma.user.findUnique({ where: { email } });
+        if (exists) return res.status(400).json({ error: 'El correo ya esta registrado' });
+
+        const existsFunc = await prisma.user.findUnique({ where: { funcNumber: String(funcNumber).trim() } });
+        if (existsFunc) return res.status(400).json({ error: 'Ese numero de funcionario ya esta registrado' });
+
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        const newUser = await prisma.user.create({
+            data: {
+                name,
+                email,
+                passwordHash,
+                role: role || 'user',
+                funcNumber: String(funcNumber).trim(),
+                phoneNumber: phoneNumber ? String(phoneNumber).trim() : null
+            }
+        });
+
+        res.json({ ok: true, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, funcNumber: newUser.funcNumber } });
+    } catch (error) {
+        console.error('Create user error:', error);
+        res.status(500).json({ error: 'Error al crear usuario' });
+    }
+};

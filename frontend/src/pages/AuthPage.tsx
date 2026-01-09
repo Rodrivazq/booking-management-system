@@ -1,0 +1,306 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../hooks/useAuthStore'
+import apiFetch from '../api'
+import ThemeToggle from '../components/ThemeToggle'
+import { useToast } from '../context/ToastContext'
+
+import { useSettings } from '../context/SettingsContext'
+
+export default function AuthPage() {
+    const { settings } = useSettings()
+    const [isLogin, setIsLogin] = useState(true)
+    const [formData, setFormData] = useState({
+        email: '',
+        password: '',
+        name: '',
+        funcNumber: '',
+        phoneNumber: '',
+        identifier: '',
+        confirmPassword: ''
+    })
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
+    const setUser = useAuthStore((s) => s.setUser)
+    const navigate = useNavigate()
+    const { addToast } = useToast()
+
+    const [rememberMe, setRememberMe] = useState(false)
+    const [keepSession, setKeepSession] = useState(false)
+
+    // useEffect(() => {
+    //     const savedIdentifier = localStorage.getItem('rememberedIdentifier')
+    //     if (savedIdentifier) {
+    //         setFormData(prev => ({ ...prev, identifier: savedIdentifier }))
+    //         setRememberMe(true)
+    //     }
+    // }, [])
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value })
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setError('')
+        setLoading(true)
+
+        try {
+            if (!isLogin && formData.password !== formData.confirmPassword) {
+                throw new Error('Las contraseñas no coinciden')
+            }
+
+            const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
+            const body = isLogin
+                ? { identifier: formData.identifier, password: formData.password, keepSession }
+                : { name: formData.name, email: formData.email, password: formData.password, funcNumber: formData.funcNumber, phoneNumber: formData.phoneNumber }
+
+            const res = await apiFetch<{ token: string, user: any }>(endpoint, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            })
+
+            localStorage.setItem('token', res.token)
+            setUser(res.user)
+
+            if (isLogin && rememberMe) {
+                localStorage.setItem('rememberedIdentifier', formData.identifier)
+            } else {
+                localStorage.removeItem('rememberedIdentifier')
+            }
+
+            if (res.user.role === 'admin' || res.user.role === 'superadmin') {
+                navigate('/admin')
+            } else {
+                navigate('/user')
+            }
+        } catch (err: any) {
+            setError(err.message || 'Error de autenticacion')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleForgot = async () => {
+        if (!formData.identifier) {
+            addToast('Ingresa tu correo o nro de funcionario para recuperar', 'error')
+            return
+        }
+        setLoading(true)
+        try {
+            await apiFetch('/api/auth/forgot', {
+                method: 'POST',
+                body: JSON.stringify({ identifier: formData.identifier })
+            })
+            addToast('Se ha enviado un correo de recuperación (revisa la consola del backend)', 'info')
+        } catch (e: any) {
+            addToast(e.message || 'Error al solicitar recuperación', 'error')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div className="auth-container">
+            {/* Left Side - Hero */}
+            <div className="auth-hero" style={settings.loginBackgroundImage ? { backgroundImage: `url(${settings.loginBackgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+                <div className="auth-hero-content" style={settings.loginBackgroundImage ? { background: 'rgba(0,0,0,0.6)', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '4rem' } : {}}>
+                    {settings.logoUrl ? (
+                        <img src={settings.logoUrl} alt="Logo" style={{ width: '8rem', height: '8rem', objectFit: 'contain', marginBottom: '2rem' }} />
+                    ) : (
+                        <div className="logo-icon" style={{ width: '4rem', height: '4rem', fontSize: '2rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)' }}>
+                            R
+                        </div>
+                    )}
+                    <h1>{settings.welcomeTitle || settings.companyName}</h1>
+                    <p>{settings.welcomeMessage || 'Gestiona tus comidas diarias de forma eficiente. Planifica tu semana y disfruta de un servicio de comedor de primera clase.'}</p>
+
+                    <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
+                        <div>
+                            <h3 style={{ color: 'white', fontSize: '2rem', marginBottom: '0' }}>+1k</h3>
+                            <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>Usuarios Activos</p>
+                        </div>
+                        <div>
+                            <h3 style={{ color: 'white', fontSize: '2rem', marginBottom: '0' }}>4.8</h3>
+                            <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>Satisfaccion</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Side - Form */}
+            <div className="auth-form-container animate-fade-in" style={{ position: 'relative' }}>
+                <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+                    <ThemeToggle />
+                </div>
+                <div className="auth-header">
+                    <h2>{isLogin ? 'Bienvenido de nuevo' : 'Crear Cuenta'}</h2>
+                    <p className="muted">
+                        {isLogin ? 'Ingresa tus credenciales para acceder a tu panel.' : 'Registrate para comenzar a gestionar tus reservas.'}
+                    </p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="flex-col" autoComplete="off">
+                    {isLogin ? (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Correo o Nro Funcionario</label>
+                            <input
+                                className="input"
+                                name="identifier"
+                                value={formData.identifier}
+                                onChange={handleChange}
+                                placeholder="ej. juan@empresa.com"
+                                required
+                                autoComplete="off"
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre Completo</label>
+                                <input
+                                    className="input"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    placeholder="Juan Perez"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Correo Electronico</label>
+                                <input
+                                    className="input"
+                                    name="email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    placeholder="juan@empresa.com"
+                                    required
+                                />
+                            </div>
+                            <div className="grid-2" style={{ gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nro Funcionario</label>
+                                    <input
+                                        className="input"
+                                        name="funcNumber"
+                                        value={formData.funcNumber}
+                                        onChange={handleChange}
+                                        placeholder="12345"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Celular</label>
+                                    <input
+                                        className="input"
+                                        name="phoneNumber"
+                                        value={formData.phoneNumber}
+                                        onChange={handleChange}
+                                        placeholder="099123456"
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    <div>
+                        <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
+                            <label style={{ fontWeight: 500 }}>Contrasena</label>
+                            {isLogin && (
+                                <button
+                                    type="button"
+                                    onClick={handleForgot}
+                                    className="btn"
+                                    style={{ background: 'transparent', color: 'var(--accent)', fontSize: '0.85rem', padding: 0, height: 'auto' }}
+                                >
+                                    ¿Olvidaste tu contrasena?
+                                </button>
+                            )}
+                        </div>
+                        <input
+                            className="input"
+                            name="password"
+                            type="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            placeholder="••••••••"
+                            required
+                            autoComplete="new-password"
+                        />
+                    </div>
+
+                    {!isLogin && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Confirmar Contraseña</label>
+                            <input
+                                className="input"
+                                name="confirmPassword"
+                                type="password"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
+                    )}
+
+                    {isLogin && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input
+                                    type="checkbox"
+                                    id="rememberMe"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    style={{ accentColor: 'var(--accent)', width: '1rem', height: '1rem' }}
+                                />
+                                <label htmlFor="rememberMe" style={{ cursor: 'pointer', userSelect: 'none' }}>Recordar usuario</label>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input
+                                    type="checkbox"
+                                    id="keepSession"
+                                    checked={keepSession}
+                                    onChange={(e) => setKeepSession(e.target.checked)}
+                                    style={{ accentColor: 'var(--accent)', width: '1rem', height: '1rem' }}
+                                />
+                                <label htmlFor="keepSession" style={{ cursor: 'pointer', userSelect: 'none' }}>Mantener sesion iniciada</label>
+                            </div>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="badge" style={{ background: '#fee2e2', color: '#991b1b', width: '100%', justifyContent: 'center', padding: '0.75rem' }}>
+                            {error}
+                        </div>
+                    )}
+
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '1rem' }} disabled={loading}>
+                        {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesion' : 'Crear Cuenta')}
+                    </button>
+                </form>
+
+                <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                    <p className="muted" style={{ fontSize: '0.9rem' }}>
+                        {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
+                        <button
+                            onClick={() => { setIsLogin(!isLogin); setError(''); }}
+                            className="btn"
+                            style={{ background: 'transparent', color: 'var(--accent)', padding: '0 0.5rem', height: 'auto', display: 'inline', fontWeight: 600 }}
+                        >
+                            {isLogin ? 'Registrate aqui' : 'Inicia Sesion'}
+                        </button>
+                    </p>
+                </div>
+
+                <div style={{ marginTop: 'auto', textAlign: 'center', paddingTop: '2rem' }}>
+                    <p className="muted" style={{ fontSize: '0.8rem' }}>
+                        &copy; {new Date().getFullYear()} Reservas App. Todos los derechos reservados.
+                    </p>
+                </div>
+            </div>
+        </div>
+    )
+}
