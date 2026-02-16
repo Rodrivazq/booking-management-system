@@ -5,6 +5,11 @@ interface WeekPickerProps {
     onChange: (date: Date) => void
 }
 
+const MONTHS = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+]
+
 export default function WeekPicker({ selectedDate, onChange }: WeekPickerProps) {
     const [viewDate, setViewDate] = useState(selectedDate)
 
@@ -31,8 +36,18 @@ export default function WeekPicker({ selectedDate, onChange }: WeekPickerProps) 
         setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))
     }
 
+    const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setViewDate(new Date(viewDate.getFullYear(), parseInt(e.target.value), 1))
+    }
+
     const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setViewDate(new Date(parseInt(e.target.value), viewDate.getMonth(), 1))
+    }
+
+    const handleToday = () => {
+        const today = new Date();
+        setViewDate(today);
+        onChange(today);
     }
 
     const isSameDay = (d1: Date, d2: Date) => {
@@ -85,12 +100,19 @@ export default function WeekPicker({ selectedDate, onChange }: WeekPickerProps) 
 
     return (
         <div className="calendar-container card" style={{ padding: '1rem', width: '100%' }}>
-            <div className="calendar-header flex-between" style={{ marginBottom: '1rem' }}>
+            <div className="calendar-header flex-center-wrap" style={{ marginBottom: '1rem', gap: '0.5rem', justifyContent: 'space-between' }}>
                 <button className="btn btn-sm" onClick={handlePrevMonth}>&lt;</button>
+                
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 'bold', textTransform: 'capitalize' }}>
-                        {viewDate.toLocaleString('es-ES', { month: 'long' })}
-                    </span>
+                    <select
+                        className="input"
+                        style={{ padding: '0.2rem', width: 'auto', textTransform: 'capitalize' }}
+                        value={viewDate.getMonth()}
+                        onChange={handleMonthChange}
+                    >
+                        {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    
                     <select
                         className="input"
                         style={{ padding: '0.2rem', width: 'auto' }}
@@ -100,7 +122,11 @@ export default function WeekPicker({ selectedDate, onChange }: WeekPickerProps) 
                         {years.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                 </div>
-                <button className="btn btn-sm" onClick={handleNextMonth}>&gt;</button>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn btn-sm" onClick={handleToday} title="Ir a hoy">Hoy</button>
+                    <button className="btn btn-sm" onClick={handleNextMonth}>&gt;</button>
+                </div>
             </div>
 
             <div className="calendar-grid">
@@ -149,6 +175,11 @@ export default function WeekPicker({ selectedDate, onChange }: WeekPickerProps) 
         .btn-sm {
           padding: 0.25rem 0.5rem;
           font-size: 0.8rem;
+        }
+        .flex-center-wrap {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
         }
       `}</style>
         </div>
