@@ -5,7 +5,7 @@ import { z } from 'zod';
 dotenv.config();
 
 const envSchema = z.object({
-  PORT: z.string().default('3001').transform(Number),
+  PORT: z.coerce.number().default(3001),
   JWT_SECRET: z.string().default('dev_secret_change_me'),
   BASE_URL: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
