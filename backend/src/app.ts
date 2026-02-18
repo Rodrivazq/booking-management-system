@@ -37,4 +37,8 @@ app.get('/api/health', (_req, res) => {
     res.json({ ok: true, nextMonday: nextMonday.toISOString().slice(0, 10) });
 });
 
+app.get('/', (_req, res) => {
+    res.send('Backend API Running');
+});
+
 export default app;
