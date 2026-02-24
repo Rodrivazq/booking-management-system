@@ -60,6 +60,8 @@ export const register = async (req: Request, res: Response) => {
 
         const passwordHash = bcrypt.hashSync(password, 10);
         
+        const verificationToken = uuidv4();
+        
         const user = await prisma.user.create({
             data: {
                 name,
@@ -69,15 +71,80 @@ export const register = async (req: Request, res: Response) => {
                 funcNumber: normalizedFunc,
                 documentId: normalizedDoc,
                 phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
-                photoUrl
+                photoUrl,
+                verificationToken,
+                isEmailVerified: false
             }
         });
 
-        const token = jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber }, JWT_SECRET, { expiresIn: '12h' });
-        res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber, phoneNumber: user.phoneNumber } });
+        const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
+
+        if (resend) {
+            try {
+                await resend.emails.send({
+                    from: 'App de Reservas <acceso@resend.dev>',
+                    to: [user.email],
+                    subject: 'Confirma tu correo electrónico',
+                    html: `
+                    <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 20px; text-align: center;">
+                        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                            <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px; font-weight: bold;">App de Reservas</h2>
+                            <h3 style="color: #374151; font-size: 20px; margin-bottom: 20px;">Verificación de Cuenta</h3>
+                            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                                Hola <strong>${user.name}</strong> 👋.<br><br>Gracias por registrarte. Para poder ingresar a tu cuenta y empezar a reservar, necesitamos que confirmes tu dirección de correo electrónico haciendo clic en el siguiente botón:
+                            </p>
+                            <a href="${verifyUrl}" style="display: inline-block; background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                                Verificar mi Correo
+                            </a>
+                            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                                Si no creaste esta cuenta, simplemente ignora este correo.
+                            </p>
+                        </div>
+                    </div>
+                    `
+                });
+            } catch (error) {
+                console.error("Resend error (Verification):", error);
+            }
+        } else {
+            console.log('Verification link:', verifyUrl);
+        }
+
+        res.status(201).json({ message: 'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de ingresar.' });
     } catch (error) {
         console.error('Register error:', error);
         res.status(500).json({ error: 'Error al registrar usuario' });
+    }
+};
+
+export const verifyEmail = async (req: Request, res: Response) => {
+    const { token } = req.query;
+
+    if (!token || typeof token !== 'string') {
+        return res.status(400).json({ error: 'Token de verificación faltante o inválido' });
+    }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { verificationToken: token }
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'El enlace de verificación es inválido o ya fue utilizado.' });
+        }
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isEmailVerified: true,
+                verificationToken: null
+            }
+        });
+
+        res.json({ message: 'Correo verificado exitosamente. Ya puedes iniciar sesión.' });
+    } catch (error) {
+        console.error('Verify Email error:', error);
+        res.status(500).json({ error: 'Ocurrió un error al verificar el correo.' });
     }
 };
 
@@ -109,6 +176,10 @@ export const login = async (req: Request, res: Response) => {
         console.log(`User found: ${user.email}, Hash: ${user.passwordHash.substring(0, 10)}..., PwdCheck: ${ok}`);
         
         if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
+
+        if (!user.isEmailVerified && user.role !== 'superadmin') {
+            return res.status(403).json({ error: 'Debes verificar tu correo electronico antes de iniciar sesion. Revisa tu bandeja de entrada o la carpeta de SPAM.' });
+        }
 
         const expiresIn = keepSession ? '30d' : '12h';
         const token = jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber }, JWT_SECRET, { expiresIn });

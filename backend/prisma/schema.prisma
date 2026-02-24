@@ -19,6 +19,8 @@ model User {
   phoneNumber  String?
   photoUrl     String?
   preferences  String?
+  isEmailVerified Boolean @default(false)
+  verificationToken String? @unique
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

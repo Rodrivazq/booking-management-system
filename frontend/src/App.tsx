@@ -9,6 +9,7 @@ import PrintPage from './pages/PrintPage'
 import ReportsPage from './pages/ReportsPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 import MaintenancePage from './pages/MaintenancePage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import { useAuthStore } from './hooks/useAuthStore'
 import { useSettings } from './context/SettingsContext'
 import './styles/theme.css'
@@ -43,6 +44,7 @@ export default function App() {
       <Route path="/login" element={<AuthPage />} />
       <Route path="/register" element={<AuthPage />} />
       <Route path="/reset" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Protected Routes */}
       <Route path="/" element={

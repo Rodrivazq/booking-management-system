@@ -9,8 +9,12 @@ import qrRoutes from './routes/qr.routes';
 import reportsRoutes from './routes/reportsRoutes';
 import settingsRoutes from './routes/settings.routes';
 import statsRoutes from './routes/stats.routes';
+import { startReminderJob } from './jobs/reminder.job';
 
 const app = express();
+
+// Iniciar CronJob de Verificaciones en Background
+startReminderJob();
 
 app.use(
   cors({

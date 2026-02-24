@@ -216,6 +216,7 @@ export default function ProfilePage() {
                         style={{ display: 'none' }}
                         accept="image/*"
                         onChange={handleFileChange}
+                        capture="environment"
                     />
                     <h3>{user.name}</h3>
                     <p className="muted">{user.email}</p>

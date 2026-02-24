@@ -136,6 +136,7 @@ export default function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameFor
                 style={{ display: 'none' }}
                 accept="image/*"
                 onChange={handleFileChange}
+                capture="environment"
             />
 
             {showCropModal && (
