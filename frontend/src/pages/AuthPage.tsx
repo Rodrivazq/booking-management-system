@@ -156,11 +156,13 @@ export default function AuthPage() {
                             <input
                                 className="input"
                                 name="identifier"
+                                type="text"
                                 value={formData.identifier}
                                 onChange={handleChange}
-                                placeholder="ej. juan@empresa.com"
+                                placeholder="ej. juan@empresa.com o 12345"
                                 required
-                                autoComplete="off"
+                                autoComplete="username"
+                                spellCheck="false"
                             />
                         </div>
                     ) : (

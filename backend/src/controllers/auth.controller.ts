@@ -150,33 +150,38 @@ export const forgotPassword = async (req: Request, res: Response) => {
         const resetUrl = `${FRONTEND_URL}/reset?token=${token}`;
 
         if (resend) {
-            await resend.emails.send({
-                from: 'App de Reservas <acceso@resend.dev>', // You should verify a domain in Resend later
-                to: [user.email],
-                subject: 'Restablecer contraseña',
-                html: `
-                <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 20px; text-align: center;">
-                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                        <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px; font-weight: bold;">App de Reservas</h2>
-                        <h3 style="color: #374151; font-size: 20px; margin-bottom: 20px;">Restablecimiento de Contraseña</h3>
-                        <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-                            Hola <strong>${user.name}</strong> 👋.<br><br>Hemos recibido una solicitud para restablecer tu contraseña. Si fuiste tú, puedes hacerlo haciendo clic en el siguiente botón:
-                        </p>
-                        <a href="${resetUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                            Definir nueva contraseña
-                        </a>
-                        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                            Este botón será válido por <strong>1 hora</strong>. Si no solicitaste este cambio, simplemente ignora este correo y tu cuenta seguirá segura.
-                        </p>
-                        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-                        <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">
-                            Si tienes problemas con el botón, copia y pega este enlace en tu navegador:<br>
-                            <a href="${resetUrl}" style="color: #2563eb; word-break: break-all;">${resetUrl}</a>
-                        </p>
+            try {
+                const data = await resend.emails.send({
+                    from: 'App de Reservas <acceso@resend.dev>', // You should verify a domain in Resend later
+                    to: [user.email],
+                    subject: 'Restablecer contraseña',
+                    html: `
+                    <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 20px; text-align: center;">
+                        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                            <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px; font-weight: bold;">App de Reservas</h2>
+                            <h3 style="color: #374151; font-size: 20px; margin-bottom: 20px;">Restablecimiento de Contraseña</h3>
+                            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                                Hola <strong>${user.name}</strong> 👋.<br><br>Hemos recibido una solicitud para restablecer tu contraseña. Si fuiste tú, puedes hacerlo haciendo clic en el siguiente botón:
+                            </p>
+                            <a href="${resetUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                                Definir nueva contraseña
+                            </a>
+                            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                                Este botón será válido por <strong>1 hora</strong>. Si no solicitaste este cambio, simplemente ignora este correo y tu cuenta seguirá segura.
+                            </p>
+                            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                            <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">
+                                Si tienes problemas con el botón, copia y pega este enlace en tu navegador:<br>
+                                <a href="${resetUrl}" style="color: #2563eb; word-break: break-all;">${resetUrl}</a>
+                            </p>
+                        </div>
                     </div>
-                </div>
-                `
-            }).catch(console.error);
+                    `
+                });
+                console.log("Resend data:", data);
+            } catch (error) {
+                console.error("Resend error:", error);
+            }
         } else if (mailer) {
             mailer.sendMail({
                 to: user.email,
