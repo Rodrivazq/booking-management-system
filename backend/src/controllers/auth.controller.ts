@@ -87,10 +87,10 @@ export const login = async (req: Request, res: Response) => {
     const isEmailSearch = searchRaw.includes('@');
     const search = isEmailSearch ? searchRaw.toLowerCase() : searchRaw.replace(/\s+/g, '').toUpperCase();
     
-    const fs = require('fs');
+
 
     try {
-        fs.appendFileSync('auth_debug.log', `\n[${new Date().toISOString()}] Login attempt: search=${search}`);
+        console.log(`[${new Date().toISOString()}] Login attempt: search=${search}`);
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
@@ -101,12 +101,12 @@ export const login = async (req: Request, res: Response) => {
         });
 
         if (!user) {
-            fs.appendFileSync('auth_debug.log', `\nUser not found for search=${search}`);
+            console.log(`User not found for search=${search}`);
             return res.status(401).json({ error: 'Credenciales invalidas' });
         }
 
         const ok = bcrypt.compareSync(password || '', user.passwordHash);
-        fs.appendFileSync('auth_debug.log', `\nUser found: ${user.email}, Hash: ${user.passwordHash.substring(0, 10)}..., PwdCheck: ${ok}`);
+        console.log(`User found: ${user.email}, Hash: ${user.passwordHash.substring(0, 10)}..., PwdCheck: ${ok}`);
         
         if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
 

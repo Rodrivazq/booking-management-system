@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import WeekPicker from '../components/WeekPicker'
 import apiFetch from '../api'
@@ -15,7 +15,14 @@ export default function AdminDashboard() {
     const navigate = useNavigate()
     const { success, error } = useToast()
     const currentUser = useAuthStore(s => s.user)
-    const [activeTab, setActiveTab] = useState<'reservations' | 'menu' | 'users' | 'reports'>('reservations')
+    const [searchParams, setSearchParams] = useSearchParams()
+    const urlTab = searchParams.get('tab') as 'reservations' | 'menu' | 'users' | 'reports' | null
+    const [activeTab, setActiveTabState] = useState<'reservations' | 'menu' | 'users' | 'reports'>(urlTab || 'reservations')
+
+    const setActiveTab = (tab: 'reservations' | 'menu' | 'users' | 'reports') => {
+        setActiveTabState(tab)
+        setSearchParams({ tab })
+    }
     const [reservations, setReservations] = useState<Reservation[]>([])
     const [users, setUsers] = useState<User[]>([])
     const [menuData, setMenuData] = useState<{ current: Menu, next: Menu } | null>(null)
@@ -36,14 +43,15 @@ export default function AdminDashboard() {
         email: '',
         password: '',
         funcNumber: '',
+        documentId: '',
         phoneNumber: '',
         role: 'user' as 'user' | 'admin' | 'superadmin',
         photoUrl: ''
     })
 
     const handleCreateUser = async () => {
-        if (!newUser.name || !newUser.email || !newUser.password || !newUser.funcNumber || !newUser.photoUrl) {
-            error('Por favor completa todos los campos obligatorios, incluyendo la foto de perfil')
+        if (!newUser.name || !newUser.email || !newUser.password || !newUser.funcNumber || !newUser.documentId || !newUser.photoUrl) {
+            error('Por favor completa todos los campos obligatorios, incluyendo la foto de perfil y documento')
             return
         }
         try {
@@ -53,7 +61,7 @@ export default function AdminDashboard() {
             })
             success('Usuario creado exitosamente')
             setShowCreateUser(false)
-            setNewUser({ name: '', email: '', password: '', funcNumber: '', phoneNumber: '', role: 'user', photoUrl: '' })
+            setNewUser({ name: '', email: '', password: '', funcNumber: '', documentId: '', phoneNumber: '', role: 'user', photoUrl: '' })
             loadData()
         } catch (e: any) {
             error(e.message)
@@ -463,6 +471,7 @@ export default function AdminDashboard() {
                                         <input className="input" placeholder="Email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
                                         <input className="input" placeholder="Contrasena" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
                                         <input className="input" placeholder="Nro Funcionario" value={newUser.funcNumber} onChange={e => setNewUser({ ...newUser, funcNumber: e.target.value })} />
+                                        <input className="input" placeholder="Documento (DNI)" value={newUser.documentId} onChange={e => setNewUser({ ...newUser, documentId: e.target.value })} />
                                         <input className="input" placeholder="Telefono (Opcional)" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
                                         <select className="input" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value as any })}>
                                             <option value="user">Usuario</option>
@@ -648,10 +657,12 @@ export default function AdminDashboard() {
                                     Imprimir Semanal
                                 </button>
                             </div>
-                            <div className="grid-3">
-                                <div>
-                                    <h4 className="muted" style={{ marginBottom: '0.5rem' }}>Total Comidas</h4>
-                                    <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem' }}>
+                            <div className="grid-3" style={{ gap: '1rem' }}>
+                                <div className="card" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px' }}>
+                                    <h4 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🍽️</span> Total Comidas
+                                    </h4>
+                                    <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
                                         {(() => {
                                             const weeklyMeals: Record<string, number> = {}
                                             DAYS.forEach(day => {
@@ -677,9 +688,11 @@ export default function AdminDashboard() {
                                         })()}
                                     </ul>
                                 </div>
-                                <div>
-                                    <h4 className="muted" style={{ marginBottom: '0.5rem' }}>Total Postres</h4>
-                                    <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem' }}>
+                                <div className="card" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px' }}>
+                                    <h4 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🍰</span> Total Postres
+                                    </h4>
+                                    <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
                                         {(() => {
                                             const weeklyDesserts: Record<string, number> = {}
                                             DAYS.forEach(day => {
@@ -697,10 +710,12 @@ export default function AdminDashboard() {
                                         })()}
                                     </ul>
                                 </div>
-                                <div>
-                                    <h4 className="muted" style={{ marginBottom: '0.5rem' }}>Total Extras</h4>
-                                    <div style={{ fontSize: '1rem' }}>
-                                        Panes: <strong>
+                                <div className="card" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <h4 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>🥖</span> Total Extras
+                                    </h4>
+                                    <div style={{ fontSize: '1.5rem', color: 'var(--text)', textAlign: 'center' }}>
+                                        Panes: <strong style={{ color: 'var(--accent)' }}>
                                             {(() => {
                                                 let totalBread = 0
                                                 DAYS.forEach(day => {
@@ -732,8 +747,8 @@ export default function AdminDashboard() {
                                             <p className="muted">No hay datos para este dia.</p>
                                         ) : (
                                             <>
-                                                <div style={{ background: 'var(--accent-light)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-                                                    <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
+                                                <div style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                                                    <div className="flex-between" style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                                         <h4 style={{ color: 'var(--accent)' }}>Resumen de Produccion (Total Dia)</h4>
                                                         <button
                                                             className="btn btn-sm btn-secondary"
@@ -749,10 +764,12 @@ export default function AdminDashboard() {
                                                             Imprimir Dia
                                                         </button>
                                                     </div>
-                                                    <div className="grid-3">
-                                                        <div>
-                                                            <strong>Comidas:</strong>
-                                                            <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem' }}>
+                                                    <div className="grid-3" style={{ gap: '1rem' }}>
+                                                        <div className="card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px' }}>
+                                                            <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <span style={{ fontSize: '1.2rem' }}>🍽️</span> Comidas:
+                                                            </h5>
+                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
                                                             {Object.entries(totals!.meals).map(([name, count]) => (
                                                                     <li key={name}>{name}: <strong>{count}</strong></li>
                                                                 ))}
@@ -761,18 +778,22 @@ export default function AdminDashboard() {
                                                                 </li>
                                                             </ul>
                                                         </div>
-                                                        <div>
-                                                            <strong>Postres:</strong>
-                                                            <ul style={{ paddingLeft: '1.2rem', fontSize: '0.9rem' }}>
+                                                        <div className="card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px' }}>
+                                                            <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <span style={{ fontSize: '1.2rem' }}>🍰</span> Postres:
+                                                            </h5>
+                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
                                                                 {Object.entries(totals!.desserts).map(([name, count]) => (
                                                                     <li key={name}>{name}: <strong>{count}</strong></li>
                                                                 ))}
                                                             </ul>
                                                         </div>
-                                                        <div>
-                                                            <strong>Extras:</strong>
-                                                            <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                                                                Panes: <strong>{totals!.bread}</strong>
+                                                        <div className="card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <span style={{ fontSize: '1.2rem' }}>🥖</span> Extras:
+                                                            </h5>
+                                                            <div style={{ fontSize: '1.5rem', color: 'var(--text)', textAlign: 'center' }}>
+                                                                Panes: <strong style={{ color: 'var(--accent)' }}>{totals!.bread}</strong>
                                                             </div>
                                                         </div>
                                                     </div>
