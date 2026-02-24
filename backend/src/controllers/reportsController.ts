@@ -38,10 +38,26 @@ export const getStats = async (req: Request, res: Response) => {
         const dishCounts: any = {};
         const reservationsByDay: any = {};
         const breadStats = { withBread: 0, withoutBread: 0 };
-        const timeSlotStats: any = {};
+        const timeSlotStats: any = {
+            '11:45': 0,
+            '12:30': 0,
+            '13:15': 0,
+            'Noche': 0
+        };
         const detailedReservations: any[] = [];
         
         const DAY_OFFSETS: any = { 'lunes': 0, 'martes': 1, 'miercoles': 2, 'jueves': 3, 'viernes': 4 };
+
+        try {
+            const [year, month, day] = targetWeek.split('-').map(Number);
+            Object.entries(DAY_OFFSETS).forEach(([dayName, offset]) => {
+                const d = new Date(year, month - 1, day + (offset as number));
+                const dateStr = d.toISOString().split('T')[0];
+                reservationsByDay[dateStr] = { total: 0, withBread: 0, withoutBread: 0, dayName };
+            });
+        } catch (e) {
+            console.warn('Error pre-initializing days', e);
+        }
 
         reservations.forEach(r => {
             let selections: any[] = [];

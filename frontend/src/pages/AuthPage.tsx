@@ -95,7 +95,7 @@ export default function AuthPage() {
                 method: 'POST',
                 body: JSON.stringify({ identifier: formData.identifier })
             })
-            addToast('Se ha enviado un correo de recuperación (revisa la consola del backend)', 'info')
+            addToast('Se ha recibido tu solicitud. Revisa tu bandeja de entrada o spam.', 'info')
         } catch (e: any) {
             addToast(e.message || 'Error al solicitar recuperación', 'error')
         } finally {

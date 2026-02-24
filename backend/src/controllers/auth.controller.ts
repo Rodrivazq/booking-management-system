@@ -3,8 +3,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import prisma from '../utils/prisma';
-import { JWT_SECRET, FRONTEND_URL, SMTP } from '../config/env';
+import { JWT_SECRET, FRONTEND_URL, SMTP, RESEND_API_KEY } from '../config/env';
+
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 function createTransport() {
     if (!SMTP.host) return null;
@@ -145,7 +148,16 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
         const resetUrl = `${FRONTEND_URL}/reset?token=${token}`;
 
-        if (mailer) {
+        if (resend) {
+            await resend.emails.send({
+                from: 'App de Reservas <acceso@resend.dev>', // You should verify a domain in Resend later
+                to: [user.email],
+                subject: 'Restablecer contraseña',
+                html: `<p>Ingresa al siguiente enlace para definir tu nueva contraseña:</p>
+                       <p><a href="${resetUrl}">${resetUrl}</a></p>
+                       <p>El enlace expira en 1 hora.</p>`
+            }).catch(console.error);
+        } else if (mailer) {
             mailer.sendMail({
                 to: user.email,
                 from: SMTP.from,

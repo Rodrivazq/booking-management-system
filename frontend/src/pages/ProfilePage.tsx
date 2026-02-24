@@ -4,6 +4,9 @@ import { useAuthStore } from '../hooks/useAuthStore'
 import apiFetch from '../api'
 import { useToast } from '../context/ToastContext'
 import ThemeToggle from '../components/ThemeToggle'
+import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
+import imageCompression from 'browser-image-compression'
 
 export default function ProfilePage() {
     const { user, setUser } = useAuthStore()
@@ -17,15 +20,23 @@ export default function ProfilePage() {
         phoneNumber: '',
         currentPassword: '',
         newPassword: '',
-        confirmNewPassword: ''
+        confirmNewPassword: '',
+        photoUrl: ''
     })
+
+    const [imgSrc, setImgSrc] = useState('')
+    const [crop, setCrop] = useState<Crop>()
+    const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
+    const imgRef = useRef<HTMLImageElement>(null)
+    const [showCropModal, setShowCropModal] = useState(false)
 
     useEffect(() => {
         if (user) {
             setFormData(prev => ({
                 ...prev,
                 name: user.name || '',
-                phoneNumber: user.phoneNumber || ''
+                phoneNumber: user.phoneNumber || '',
+                photoUrl: user.photoUrl || ''
             }))
         }
     }, [user])
@@ -35,18 +46,69 @@ export default function ProfilePage() {
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            if (file.size > 500000) { // 500KB limit
-                addToast('La imagen es muy pesada (max 500KB)', 'error')
-                return
-            }
+        if (e.target.files && e.target.files.length > 0) {
             const reader = new FileReader()
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, photoUrl: reader.result as string }))
-            }
-            reader.readAsDataURL(file)
+            reader.addEventListener('load', () => {
+                setImgSrc(reader.result?.toString() || '')
+                setShowCropModal(true)
+            })
+            reader.readAsDataURL(e.target.files[0])
+            e.target.value = ''
         }
+    }
+
+    const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const { width, height } = e.currentTarget
+        const initialCrop = centerCrop(
+            makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
+            width, height
+        )
+        setCrop(initialCrop)
+    }
+
+    const handleCropComplete = async () => {
+        if (!completedCrop || !imgRef.current) return
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        const scaleX = imgRef.current.naturalWidth / imgRef.current.width
+        const scaleY = imgRef.current.naturalHeight / imgRef.current.height
+
+        canvas.width = completedCrop.width * scaleX
+        canvas.height = completedCrop.height * scaleY
+
+        ctx.drawImage(
+            imgRef.current,
+            completedCrop.x * scaleX,
+            completedCrop.y * scaleY,
+            completedCrop.width * scaleX,
+            completedCrop.height * scaleY,
+            0, 0,
+            canvas.width, canvas.height
+        )
+
+        canvas.toBlob(async (blob) => {
+            if (!blob) return
+            try {
+                const file = new File([blob], "avatar.webp", { type: "image/webp" })
+                const compressedFile = await imageCompression(file, {
+                    maxSizeMB: 0.1,
+                    maxWidthOrHeight: 400,
+                    useWebWorker: true,
+                    fileType: 'image/webp'
+                })
+                const reader = new FileReader()
+                reader.readAsDataURL(compressedFile)
+                reader.onloadend = () => {
+                    setFormData(prev => ({ ...prev, photoUrl: reader.result as string }))
+                    setShowCropModal(false)
+                }
+            } catch (e) {
+                console.error(e)
+                addToast('Error al procesar imagen', 'error')
+            }
+        }, 'image/webp', 0.9)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +118,8 @@ export default function ProfilePage() {
         try {
             const payload: any = {
                 name: formData.name,
-                phoneNumber: formData.phoneNumber
+                phoneNumber: formData.phoneNumber,
+                photoUrl: formData.photoUrl
             }
 
             if (activeTab === 'security') {
@@ -128,7 +191,11 @@ export default function ProfilePage() {
                         onClick={() => fileInputRef.current?.click()}
                         className="profile-avatar"
                     >
-                        {user.name.charAt(0).toUpperCase()}
+                        {formData.photoUrl || user.photoUrl ? (
+                            <img src={formData.photoUrl || user.photoUrl} alt="Avatar" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        ) : (
+                            user.name.charAt(0).toUpperCase()
+                        )}
                         <div className="avatar-overlay" style={{
                             position: 'absolute',
                             bottom: 0,
@@ -265,6 +332,29 @@ export default function ProfilePage() {
                     </form>
                 </div>
             </div>
+
+            {showCropModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="card" style={{ maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', textAlign: 'center' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Recortar Imagen</h3>
+                        {imgSrc && (
+                            <ReactCrop
+                                crop={crop}
+                                onChange={c => setCrop(c)}
+                                onComplete={c => setCompletedCrop(c)}
+                                aspect={1}
+                                circularCrop
+                            >
+                                <img ref={imgRef} src={imgSrc} onLoad={onImageLoad} style={{ maxHeight: '60vh', maxWidth: '100%' }} />
+                            </ReactCrop>
+                        )}
+                        <div className="flex-between" style={{ marginTop: '1rem' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowCropModal(false)}>Cancelar</button>
+                            <button className="btn btn-primary" onClick={handleCropComplete}>Aplicar y Optimizar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Layout>
     )
 }
