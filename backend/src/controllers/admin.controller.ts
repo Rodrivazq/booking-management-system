@@ -50,7 +50,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
             }
         });
 
-        res.json({ ok: true, user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, funcNumber: updatedUser.funcNumber, phoneNumber: updatedUser.phoneNumber } });
+        res.json({ ok: true, user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, funcNumber: updatedUser.funcNumber, phoneNumber: updatedUser.phoneNumber, documentId: updatedUser.documentId } });
     } catch (error) {
         console.error('Update user error:', error);
         res.status(500).json({ error: 'Error al actualizar usuario' });
@@ -97,7 +97,7 @@ export const createUser = async (req: Request, res: Response) => {
             }
         });
 
-        res.json({ ok: true, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, funcNumber: newUser.funcNumber } });
+        res.json({ ok: true, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, funcNumber: newUser.funcNumber, documentId: newUser.documentId } });
     } catch (error) {
         console.error('Create user error:', error);
         res.status(500).json({ error: 'Error al crear usuario' });

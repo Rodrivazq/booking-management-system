@@ -158,6 +158,7 @@ export const getAllReservations = async (req: Request, res: Response) => {
             name: u.name,
             email: u.email,
             funcNumber: u.funcNumber,
+            documentId: u.documentId,
             phoneNumber: u.phoneNumber,
             role: u.role,
             photoUrl: u.photoUrl,
