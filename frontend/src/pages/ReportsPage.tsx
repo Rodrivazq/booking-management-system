@@ -162,98 +162,114 @@ export default function ReportsPage() {
 
             {/* KPI Cards */}
             <div className="grid-4" style={{ marginBottom: '2rem' }}>
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-                    <div style={{ background: '#e0f2fe', padding: '1rem', borderRadius: '50%', color: '#0284c7' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', padding: '1.5rem', borderLeft: '4px solid #0284c7', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                    <div style={{ background: 'rgba(2, 132, 199, 0.1)', padding: '1rem', borderRadius: '12px', color: '#0284c7' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Usuarios Totales</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.userStats.totalUsers}</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Usuarios Totales</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{stats.userStats.totalUsers}</div>
                     </div>
                 </div>
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-                    <div style={{ background: '#dcfce7', padding: '1rem', borderRadius: '50%', color: '#16a34a' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', padding: '1.5rem', borderLeft: '4px solid #16a34a', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                    <div style={{ background: 'rgba(22, 163, 74, 0.1)', padding: '1rem', borderRadius: '12px', color: '#16a34a' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Usuarios Activos</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.userStats.activeUsers}</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Adhesión Activa</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{stats.userStats.activeUsers}</div>
                     </div>
                 </div>
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-                    <div style={{ background: '#fef3c7', padding: '1rem', borderRadius: '50%', color: '#d97706' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"></path></svg>
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', padding: '1.5rem', borderLeft: '4px solid #d97706', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                    <div style={{ background: 'rgba(217, 119, 6, 0.1)', padding: '1rem', borderRadius: '12px', color: '#d97706' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"></path></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Reservas Totales</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{totalReservations}</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Volumen de Reservas</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{totalReservations}</div>
                     </div>
                 </div>
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-                    <div style={{ background: '#f3e8ff', padding: '1rem', borderRadius: '50%', color: '#9333ea' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', padding: '1.5rem', borderLeft: '4px solid #9333ea', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                    <div style={{ background: 'rgba(147, 51, 234, 0.1)', padding: '1rem', borderRadius: '12px', color: '#9333ea' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Promedio Diario</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{(totalReservations / 5).toFixed(1)}</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Promedio Diario</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{(totalReservations / 5).toFixed(1)}</div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid-2" style={{ marginBottom: '2rem' }}>
-                <div className="card">
-                    <h3>Reservas por Día (Con/Sin Pan)</h3>
-                    <div style={{ width: '100%', height: 350 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={stats.dailyStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                />
-                                <Legend />
-                                <Bar dataKey="withBread" name="Con Pan" stackId="a" fill="#eab308" />
-                                <Bar dataKey="withoutBread" name="Sin Pan" stackId="a" fill="#9ca3af" />
-                            </BarChart>
-                        </ResponsiveContainer>
+            <div className="card" style={{ marginBottom: '2rem' }}>
+                <div style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div>
+                        <h3 style={{ margin: 0, color: 'var(--accent)', fontSize: '1.4rem' }}>Fluidez de Reservas Diarias</h3>
+                        <p className="muted" style={{ margin: 0, fontSize: '0.9rem', marginTop: '0.25rem' }}>Comparativa de pedidos con y sin panificados a lo largo de la semana</p>
                     </div>
                 </div>
-
-                <div className="card">
-                    <h3>Distribución de Turnos</h3>
-                    <div style={{ width: '100%', height: 350 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={stats.timeSlotStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="time" />
-                                <YAxis />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                />
-                                <Bar dataKey="count" name="Reservas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            <div className="card">
-                <h3>Top 5 Platos Más Populares</h3>
-                <div style={{ width: '100%', height: 300 }}>
+                <div style={{ width: '100%', height: 400 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats.popularDishes} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                            <XAxis type="number" />
-                            <YAxis dataKey="name" type="category" width={150} />
-                            <Tooltip />
-                            <Bar dataKey="count" fill="#8884d8" radius={[0, 4, 4, 0]}>
-                                {stats.popularDishes.map((_, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Bar>
+                        <BarChart data={stats.dailyStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+                            <Tooltip 
+                                cursor={{ fill: 'var(--bg-hover)' }}
+                                contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                            />
+                            <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                            <Bar dataKey="withBread" name="Menú c/ Pan" stackId="a" fill="#eab308" radius={[0, 0, 4, 4]} />
+                            <Bar dataKey="withoutBread" name="Menú s/ Pan" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
+                </div>
+            </div>
+
+            <div className="grid-2" style={{ marginBottom: '2rem', alignItems: 'stretch' }}>
+                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: 0, color: 'var(--accent)', fontSize: '1.2rem' }}>Distribución de Turnos</h3>
+                        <p className="muted" style={{ margin: 0, fontSize: '0.85rem', marginTop: '0.25rem' }}>Horarios de retiro con mayor demanda</p>
+                    </div>
+                    <div style={{ width: '100%', minHeight: 350, flex: 1 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stats.timeSlotStats} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+                                <YAxis tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+                                <Tooltip 
+                                    cursor={{ fill: 'var(--bg-hover)' }}
+                                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                />
+                                <Bar dataKey="count" name="Reservas" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={60} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: 0, color: 'var(--accent)', fontSize: '1.2rem' }}>Top Platos Estrella</h3>
+                        <p className="muted" style={{ margin: 0, fontSize: '0.85rem', marginTop: '0.25rem' }}>Opciones gastronómicas más populares</p>
+                    </div>
+                    <div style={{ width: '100%', minHeight: 350, flex: 1 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stats.popularDishes} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" />
+                                <XAxis type="number" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+                                <YAxis dataKey="name" type="category" width={140} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+                                <Tooltip 
+                                    cursor={{ fill: 'var(--bg-hover)' }}
+                                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+                                />
+                                <Bar dataKey="count" name="Pedidos" radius={[0, 4, 4, 0]} maxBarSize={40}>
+                                    {stats.popularDishes.map((_, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
         </Layout>
