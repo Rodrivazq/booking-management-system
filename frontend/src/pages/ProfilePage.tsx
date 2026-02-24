@@ -15,7 +15,6 @@ export default function ProfilePage() {
     const [formData, setFormData] = useState({
         name: '',
         phoneNumber: '',
-        photoUrl: '',
         currentPassword: '',
         newPassword: '',
         confirmNewPassword: ''
@@ -26,8 +25,7 @@ export default function ProfilePage() {
             setFormData(prev => ({
                 ...prev,
                 name: user.name || '',
-                phoneNumber: user.phoneNumber || '',
-                photoUrl: user.photoUrl || ''
+                phoneNumber: user.phoneNumber || ''
             }))
         }
     }, [user])
@@ -58,8 +56,7 @@ export default function ProfilePage() {
         try {
             const payload: any = {
                 name: formData.name,
-                phoneNumber: formData.phoneNumber,
-                photoUrl: formData.photoUrl
+                phoneNumber: formData.phoneNumber
             }
 
             if (activeTab === 'security') {
@@ -131,11 +128,7 @@ export default function ProfilePage() {
                         onClick={() => fileInputRef.current?.click()}
                         className="profile-avatar"
                     >
-                        {formData.photoUrl ? (
-                            <img src={formData.photoUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                            user.name.charAt(0).toUpperCase()
-                        )}
+                        {user.name.charAt(0).toUpperCase()}
                         <div className="avatar-overlay" style={{
                             position: 'absolute',
                             bottom: 0,
@@ -210,16 +203,6 @@ export default function ProfilePage() {
                                         value={formData.phoneNumber}
                                         onChange={handleChange}
                                         placeholder="+598 99 123 456"
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem' }}>URL de Foto de Perfil</label>
-                                    <input
-                                        className="input"
-                                        name="photoUrl"
-                                        value={formData.photoUrl}
-                                        onChange={handleChange}
-                                        placeholder="https://example.com/photo.jpg"
                                     />
                                 </div>
                                 <div>

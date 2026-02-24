@@ -9,6 +9,7 @@ export interface User {
   preferences?: {
     theme?: 'light' | 'dark'
   }
+  lastReservation?: string
 }
 
 export interface Reservation {

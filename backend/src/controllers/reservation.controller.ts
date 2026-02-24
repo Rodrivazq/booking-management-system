@@ -134,7 +134,15 @@ export const getAllReservations = async (req: Request, res: Response) => {
             include: { user: true } // Include user details if needed, but we map manually below to match existing format
         });
         
-        const users = await prisma.user.findMany();
+        const users = await prisma.user.findMany({
+            include: {
+                reservations: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    select: { weekStart: true }
+                }
+            }
+        });
 
         const formattedReservations = reservations.map(r => ({
             ...r,
@@ -150,7 +158,9 @@ export const getAllReservations = async (req: Request, res: Response) => {
             name: u.name,
             email: u.email,
             funcNumber: u.funcNumber,
-            phoneNumber: u.phoneNumber
+            phoneNumber: u.phoneNumber,
+            role: u.role,
+            lastReservation: u.reservations[0]?.weekStart || null
         }));
 
         res.json({

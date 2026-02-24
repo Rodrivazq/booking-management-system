@@ -32,12 +32,24 @@ export const register = async (req: Request, res: Response) => {
     const { name, email, password, funcNumber, phoneNumber } = req.body || {};
     if (!name || !email || !password || !funcNumber) return res.status(400).json({ error: 'Nombre, correo, contrasena y numero de funcionario son obligatorios' });
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedFunc = String(funcNumber).replace(/\s+/g, '').toUpperCase();
+    
+    // Validacion temporal (reemplazar con dominio real si aplica, ej. @empresa.com)
+    const allowedDomains = ['empresa.com']; // CONFIGURAR EL DOMINIO REQUERIDO AQUÍ
+    const emailDomain = normalizedEmail.split('@')[1];
+
+    // Por ahora deshabilitado para no romper, pero dejamos el codigo listo.
+    // if (!emailDomain || !allowedDomains.includes(emailDomain)) {
+    //    return res.status(403).json({ error: 'Solo se permiten correos corporativos' });
+    // }
+
     try {
         // Check email and funcNumber uniqueness manually if needed or rely on Prisma error
-        const existingEmail = await prisma.user.findUnique({ where: { email } });
+        const existingEmail = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (existingEmail) return res.status(400).json({ error: 'El correo ya esta registrado' });
 
-        const existingFunc = await prisma.user.findUnique({ where: { funcNumber: String(funcNumber).trim() } });
+        const existingFunc = await prisma.user.findUnique({ where: { funcNumber: normalizedFunc } });
         if (existingFunc) return res.status(400).json({ error: 'Ese numero de funcionario ya esta registrado' });
 
         const passwordHash = bcrypt.hashSync(password, 10);
@@ -45,10 +57,10 @@ export const register = async (req: Request, res: Response) => {
         const user = await prisma.user.create({
             data: {
                 name,
-                email,
+                email: normalizedEmail,
                 passwordHash,
                 role: 'user',
-                funcNumber: String(funcNumber).trim(),
+                funcNumber: normalizedFunc,
                 phoneNumber: phoneNumber ? String(phoneNumber).trim() : null
             }
         });
@@ -63,7 +75,10 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
     const { email, password, identifier, keepSession } = req.body || {};
-    const search = (identifier || email || '').trim();
+    const searchRaw = String(identifier || email || '').trim();
+    const isEmailSearch = searchRaw.includes('@');
+    const search = isEmailSearch ? searchRaw.toLowerCase() : searchRaw.replace(/\s+/g, '').toUpperCase();
+    
     const fs = require('fs');
 
     try {
@@ -71,8 +86,8 @@ export const login = async (req: Request, res: Response) => {
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { email: search },
-                    { funcNumber: search }
+                    { email: searchRaw.toLowerCase() },
+                    { funcNumber: searchRaw.replace(/\s+/g, '').toUpperCase() }
                 ]
             }
         });
@@ -98,16 +113,16 @@ export const login = async (req: Request, res: Response) => {
 
 export const forgotPassword = async (req: Request, res: Response) => {
     const { identifier } = req.body || {};
-    const search = (identifier || '').trim();
+    const searchRaw = (identifier || '').trim();
 
-    if (!search) return res.status(400).json({ error: 'Debe indicar correo o numero de funcionario' });
+    if (!searchRaw) return res.status(400).json({ error: 'Debe indicar correo o numero de funcionario' });
 
     try {
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { email: search },
-                    { funcNumber: search }
+                    { email: searchRaw.toLowerCase() },
+                    { funcNumber: searchRaw }
                 ]
             }
         });

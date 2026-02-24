@@ -7,11 +7,12 @@ export const updateUserDetails = async (req: Request, res: Response) => {
     const { funcNumber, email, phoneNumber } = req.body || {};
 
     try {
+        const normalizedFunc = funcNumber ? String(funcNumber).replace(/\s+/g, '').toUpperCase() : undefined;
         // Check for conflicts
-        if (funcNumber) {
+        if (normalizedFunc) {
             const exists = await prisma.user.findFirst({
                 where: {
-                    funcNumber: String(funcNumber).trim(),
+                    funcNumber: normalizedFunc,
                     NOT: { id: userId }
                 }
             });
@@ -21,7 +22,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
         if (email) {
             const exists = await prisma.user.findFirst({
                 where: {
-                    email: String(email).trim(),
+                    email: String(email).trim().toLowerCase(),
                     NOT: { id: userId }
                 }
             });
@@ -31,8 +32,8 @@ export const updateUserDetails = async (req: Request, res: Response) => {
         const updatedUser = await prisma.user.update({
             where: { id: userId },
             data: {
-                ...(funcNumber && { funcNumber: String(funcNumber).trim() }),
-                ...(email && { email: String(email).trim() }),
+                ...(normalizedFunc && { funcNumber: normalizedFunc }),
+                ...(email && { email: String(email).trim().toLowerCase() }),
                 ...(phoneNumber && { phoneNumber: String(phoneNumber).trim() })
             }
         });
@@ -56,10 +57,13 @@ export const createUser = async (req: Request, res: Response) => {
     }
 
     try {
-        const exists = await prisma.user.findUnique({ where: { email } });
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const normalizedFunc = String(funcNumber).replace(/\s+/g, '').toUpperCase();
+        
+        const exists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (exists) return res.status(400).json({ error: 'El correo ya esta registrado' });
 
-        const existsFunc = await prisma.user.findUnique({ where: { funcNumber: String(funcNumber).trim() } });
+        const existsFunc = await prisma.user.findUnique({ where: { funcNumber: normalizedFunc } });
         if (existsFunc) return res.status(400).json({ error: 'Ese numero de funcionario ya esta registrado' });
 
         const passwordHash = await bcrypt.hash(password, 10);
@@ -67,10 +71,10 @@ export const createUser = async (req: Request, res: Response) => {
         const newUser = await prisma.user.create({
             data: {
                 name,
-                email,
+                email: normalizedEmail,
                 passwordHash,
                 role: role || 'user',
-                funcNumber: String(funcNumber).trim(),
+                funcNumber: normalizedFunc,
                 phoneNumber: phoneNumber ? String(phoneNumber).trim() : null
             }
         });
