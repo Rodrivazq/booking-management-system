@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import WeekPicker from '../components/WeekPicker'
@@ -7,7 +7,7 @@ import { Menu, Reservation, User } from '../types'
 import { useAuthStore } from '../hooks/useAuthStore'
 import Skeleton from '../components/Skeleton'
 import { useToast } from '../context/ToastContext'
-import AvatarUploader from '../components/AvatarUploader'
+import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarUploader'
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 
@@ -38,6 +38,7 @@ export default function AdminDashboard() {
 
     // Create User State
     const [showCreateUser, setShowCreateUser] = useState(false)
+    const avatarRef = useRef<AvatarUploaderHandle>(null)
     const [newUser, setNewUser] = useState({
         name: '',
         email: '',
@@ -468,6 +469,7 @@ export default function AdminDashboard() {
                                     <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil (Obligatoria)</label>
                                         <AvatarUploader 
+                                            ref={avatarRef}
                                             currentPhotoUrl={newUser.photoUrl}
                                             onPhotoChange={(url) => setNewUser(prev => ({ ...prev, photoUrl: url }))}
                                             nameForInitials={newUser.name || 'U'}
@@ -486,6 +488,17 @@ export default function AdminDashboard() {
                                             {(currentUser?.role === 'superadmin' || currentUser?.role === 'admin') && <option value="admin">Administrador</option>}
                                             {currentUser?.role === 'superadmin' && <option value="superadmin">Admin General (Super Admin)</option>}
                                         </select>
+                                    </div>
+
+                                    <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-sm btn-secondary" 
+                                            onClick={() => avatarRef.current?.openPicker()}
+                                            style={{ fontSize: '0.9rem', width: '100%', padding: '0.75rem', fontWeight: 600, border: '2px dashed var(--accent)', color: 'var(--accent)', background: 'transparent' }}
+                                        >
+                                            📸 Cargar Foto de Perfil
+                                        </button>
                                     </div>
                                     <div className="flex-between" style={{ marginTop: '1rem', justifyContent: 'flex-end' }}>
                                         <button className="btn btn-secondary" onClick={() => setShowCreateUser(false)} style={{ marginRight: '0.5rem' }}>Cancelar</button>

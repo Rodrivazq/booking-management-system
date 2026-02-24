@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import imageCompression from 'browser-image-compression';
@@ -11,10 +11,19 @@ interface AvatarUploaderProps {
     size?: string;
 }
 
-export default function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameForInitials = 'U', size = '120px' }: AvatarUploaderProps) {
+export interface AvatarUploaderHandle {
+    openPicker: () => void;
+}
+
+const AvatarUploader = forwardRef<AvatarUploaderHandle, AvatarUploaderProps>(
+    function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameForInitials = 'U', size = '120px' }, ref) {
     const { addToast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
+
+    useImperativeHandle(ref, () => ({
+        openPicker: () => fileInputRef.current?.click()
+    }));
 
     const [imgSrc, setImgSrc] = useState('');
     const [crop, setCrop] = useState<Crop>();
@@ -91,16 +100,7 @@ export default function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameFor
 
     return (
         <>
-            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-                <button 
-                    type="button" 
-                    className="btn btn-sm btn-secondary" 
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ fontSize: '0.9rem', width: '100%', maxWidth: '200px' }}
-                >
-                    📸 Cargar Foto
-                </button>
-            </div>
+
 
             <div
                 style={{
@@ -127,20 +127,8 @@ export default function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameFor
                 ) : (
                     displayInitial
                 )}
-                <div className="avatar-overlay" style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'rgba(0,0,0,0.6)',
-                    color: 'white',
-                    fontSize: '0.7rem',
-                    padding: '0.25rem',
-                    textAlign: 'center'
-                }}>
-                    Cambiar
-                </div>
             </div>
+
 
             <input
                 type="file"
@@ -174,4 +162,6 @@ export default function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameFor
             )}
         </>
     );
-}
+});
+
+export default AvatarUploader;

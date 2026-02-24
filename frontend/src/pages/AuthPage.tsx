@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '../hooks/useAuthStore'
 import apiFetch from '../api'
 import ThemeToggle from '../components/ThemeToggle'
-import AvatarUploader from '../components/AvatarUploader'
+import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarUploader'
 import { useToast } from '../context/ToastContext'
 
 import { useSettings } from '../context/SettingsContext'
@@ -14,6 +14,7 @@ export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const avatarRef = useRef<AvatarUploaderHandle>(null)
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -171,6 +172,7 @@ export default function AuthPage() {
                             <div style={{ paddingBottom: '1rem', textAlign: 'center' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil (Obligatoria)</label>
                                 <AvatarUploader 
+                                    ref={avatarRef}
                                     currentPhotoUrl={formData.photoUrl}
                                     onPhotoChange={(url) => setFormData(prev => ({ ...prev, photoUrl: url }))}
                                     nameForInitials={formData.name || 'U'}
@@ -326,6 +328,19 @@ export default function AuthPage() {
                     {error && (
                         <div className="badge" style={{ background: '#fee2e2', color: '#991b1b', width: '100%', justifyContent: 'center', padding: '0.75rem' }}>
                             {error}
+                        </div>
+                    )}
+
+                    {!isLogin && (
+                        <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+                            <button 
+                                type="button" 
+                                className="btn btn-sm btn-secondary" 
+                                onClick={() => avatarRef.current?.openPicker()}
+                                style={{ fontSize: '0.95rem', width: '100%', padding: '0.75rem', fontWeight: 600, border: '2px dashed var(--accent)', color: 'var(--accent)', background: 'transparent' }}
+                            >
+                                📸 Cargar Foto de Perfil
+                            </button>
                         </div>
                     )}
 
