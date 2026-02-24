@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/env';
+import prisma from '../utils/prisma';
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
     const header = req.headers.authorization || '';
@@ -10,10 +11,6 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
         const payload = jwt.verify(token, JWT_SECRET) as any;
         req.user = payload;
 
-        // Check for maintenance mode via Prisma instead of readDB
-        const { PrismaClient } = require('@prisma/client');
-        const prisma = new PrismaClient();
-        
         try {
             const settings = await prisma.settings.findFirst();
             if (settings?.maintenanceMode && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
@@ -21,8 +18,6 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
             }
         } catch (e) {
             console.error('Error checking maintenance mode:', e);
-        } finally {
-            await prisma.$disconnect();
         }
 
         next();

@@ -167,14 +167,9 @@ export const login = async (req: Request, res: Response) => {
             }
         });
 
-        if (!user) {
-            console.log(`User not found for search=${search}`);
-            return res.status(401).json({ error: 'Credenciales invalidas' });
-        }
+        if (!user) return res.status(401).json({ error: 'Credenciales invalidas' });
 
         const ok = bcrypt.compareSync(password || '', user.passwordHash);
-        console.log(`User found: ${user.email}, Hash: ${user.passwordHash.substring(0, 10)}..., PwdCheck: ${ok}`);
-        
         if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
 
         if (!user.isEmailVerified && user.role !== 'superadmin') {
@@ -182,8 +177,8 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const expiresIn = keepSession ? '30d' : '12h';
-        const token = jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber }, JWT_SECRET, { expiresIn });
-        res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber, phoneNumber: user.phoneNumber } });
+        const token = jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber, photoUrl: user.photoUrl }, JWT_SECRET, { expiresIn });
+        res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber, phoneNumber: user.phoneNumber, photoUrl: user.photoUrl } });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Error al iniciar sesion' });

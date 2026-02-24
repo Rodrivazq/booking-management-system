@@ -480,8 +480,8 @@ export default function AdminDashboard() {
                                         <input className="input" placeholder="Nombre Completo" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
                                         <input className="input" placeholder="Email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
                                         <input className="input" placeholder="Contrasena" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
-                                        <input className="input" placeholder="Nro Funcionario" value={newUser.funcNumber} onChange={e => setNewUser({ ...newUser, funcNumber: e.target.value })} />
-                                        <input className="input" placeholder="Documento (DNI)" value={newUser.documentId} onChange={e => setNewUser({ ...newUser, documentId: e.target.value })} />
+                                        <input className="input" inputMode="numeric" placeholder="Nro Funcionario" value={newUser.funcNumber} onChange={e => setNewUser({ ...newUser, funcNumber: e.target.value.replace(/\D/g, '') })} />
+                                        <input className="input" inputMode="numeric" placeholder="Documento (DNI)" value={newUser.documentId} onChange={e => setNewUser({ ...newUser, documentId: e.target.value.replace(/\D/g, '') })} />
                                         <input className="input" placeholder="Telefono (Opcional)" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
                                         <select className="input" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value as any })}>
                                             <option value="user">Usuario</option>

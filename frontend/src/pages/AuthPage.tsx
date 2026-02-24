@@ -61,29 +61,45 @@ export default function AuthPage() {
                 throw new Error('Debes subir una foto de perfil obligatoriamente para registrarte')
             }
 
-            const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
-            const body = isLogin
-                ? { identifier: formData.identifier, password: formData.password, keepSession }
-                : { name: formData.name, email: formData.email, password: formData.password, funcNumber: formData.funcNumber, documentId: formData.documentId, phoneNumber: formData.phoneNumber, photoUrl: formData.photoUrl }
+            if (isLogin) {
+                // LOGIN FLOW
+                const res = await apiFetch<{ token: string, user: any }>('/api/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ identifier: formData.identifier, password: formData.password, keepSession })
+                })
 
-            const res = await apiFetch<{ token: string, user: any }>(endpoint, {
-                method: 'POST',
-                body: JSON.stringify(body)
-            })
+                localStorage.setItem('token', res.token)
+                setUser(res.user)
 
-            localStorage.setItem('token', res.token)
-            setUser(res.user)
+                if (rememberMe) {
+                    localStorage.setItem('rememberedIdentifier', formData.identifier)
+                } else {
+                    localStorage.removeItem('rememberedIdentifier')
+                }
 
-            if (isLogin && rememberMe) {
-                localStorage.setItem('rememberedIdentifier', formData.identifier)
+                if (res.user.role === 'admin' || res.user.role === 'superadmin') {
+                    navigate('/admin')
+                } else {
+                    navigate('/user')
+                }
             } else {
-                localStorage.removeItem('rememberedIdentifier')
-            }
-
-            if (res.user.role === 'admin' || res.user.role === 'superadmin') {
-                navigate('/admin')
-            } else {
-                navigate('/user')
+                // REGISTER FLOW
+                await apiFetch<{ message: string }>('/api/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: formData.name,
+                        email: formData.email,
+                        password: formData.password,
+                        funcNumber: formData.funcNumber,
+                        documentId: formData.documentId,
+                        phoneNumber: formData.phoneNumber,
+                        photoUrl: formData.photoUrl
+                    })
+                })
+                // Registration succeeded — show success prompt to verify email
+                setError('')
+                addToast('✅ Cuenta creada. Revisa tu correo y verifica tu cuenta antes de ingresar.', 'success')
+                setIsLogin(true)
             }
         } catch (err: any) {
             setError(err.message || 'Error de autenticacion')
@@ -208,8 +224,9 @@ export default function AuthPage() {
                                     <input
                                         className="input"
                                         name="funcNumber"
+                                        inputMode="numeric"
                                         value={formData.funcNumber}
-                                        onChange={handleChange}
+                                        onChange={e => setFormData(prev => ({ ...prev, funcNumber: e.target.value.replace(/\D/g, '') }))}
                                         placeholder="12345"
                                         required
                                     />
@@ -219,8 +236,9 @@ export default function AuthPage() {
                                     <input
                                         className="input"
                                         name="documentId"
+                                        inputMode="numeric"
                                         value={formData.documentId}
-                                        onChange={handleChange}
+                                        onChange={e => setFormData(prev => ({ ...prev, documentId: e.target.value.replace(/\D/g, '') }))}
                                         placeholder="12345678"
                                         required
                                     />
