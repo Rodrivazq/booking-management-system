@@ -51,19 +51,21 @@ export default function PrintPage() {
             <style>{`
                 @media print {
                     @page { margin: 0.5cm; }
-                    body { margin: 0; padding: 0; font-family: sans-serif; }
+                    body { margin: 0; padding: 0; font-family: sans-serif; background: white !important; color: black !important; }
+                    * { color: black !important; }
                     .print-container { width: 100%; }
-                    .print-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                    .print-table th, .print-table td { border: 1px solid #ccc; padding: 4px; text-align: left; }
-                    .print-table th { background: #eee; }
-                    h1 { font-size: 18px; margin-bottom: 5px; }
+                    .print-table { width: 100%; border-collapse: collapse; font-size: 12px; color: black; }
+                    .print-table th, .print-table td { border: 1px solid #ccc; padding: 4px; text-align: left; color: black; }
+                    .print-table th { background: #eee !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    h1 { font-size: 18px; margin-bottom: 5px; color: black; }
                     h3 { font-size: 14px; margin-bottom: 10px; color: #666; }
                 }
                 /* Screen styles for preview */
-                .print-page { padding: 20px; background: white; min-height: 100vh; }
-                .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                .print-table th, .print-table td { border: 1px solid #ddd; padding: 8px; }
-                .print-table th { background: #f5f5f5; }
+                .print-page { padding: 20px; background: white; min-height: 100vh; color: black; }
+                .print-page * { color: black; }
+                .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; color: black; }
+                .print-table th, .print-table td { border: 1px solid #ddd; padding: 8px; color: black; }
+                .print-table th { background: #f5f5f5; color: black; }
                 .print-break { page-break-before: always; }
             `}</style>
 

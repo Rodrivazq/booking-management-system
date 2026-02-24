@@ -4,7 +4,7 @@ import prisma from '../utils/prisma';
 
 export const updateUserDetails = async (req: Request, res: Response) => {
     const { userId } = req.params;
-    const { funcNumber, email, phoneNumber } = req.body || {};
+    const { funcNumber, email, phoneNumber, documentId } = req.body || {};
 
     try {
         const normalizedFunc = funcNumber ? String(funcNumber).replace(/\s+/g, '').toUpperCase() : undefined;
@@ -17,6 +17,17 @@ export const updateUserDetails = async (req: Request, res: Response) => {
                 }
             });
             if (exists) return res.status(400).json({ error: 'Numero de funcionario ya asignado a otro usuario' });
+        }
+
+        if (documentId) {
+            const normalizedDoc = String(documentId).trim();
+            const exists = await prisma.user.findFirst({
+                where: {
+                    documentId: normalizedDoc,
+                    NOT: { id: userId }
+                }
+            });
+            if (exists) return res.status(400).json({ error: 'Ese documento (C.I.) ya esta registrado por otro usuario' });
         }
 
         if (email) {
@@ -33,6 +44,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
             where: { id: userId },
             data: {
                 ...(normalizedFunc && { funcNumber: normalizedFunc }),
+                ...(documentId && { documentId: String(documentId).trim() }),
                 ...(email && { email: String(email).trim().toLowerCase() }),
                 ...(phoneNumber && { phoneNumber: String(phoneNumber).trim() })
             }

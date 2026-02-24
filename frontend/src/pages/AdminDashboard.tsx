@@ -397,32 +397,40 @@ export default function AdminDashboard() {
 
                         {DAYS.map(day => (
                             <div key={day} className="card">
-                                <h4 style={{ textTransform: 'capitalize', marginBottom: '1rem' }}>{day}</h4>
-                                <div className="grid-2">
-                                    <div>
-                                        <h5 className="muted">Comidas</h5>
-                                        <div className="flex-col" style={{ marginTop: '0.5rem' }}>
+                                <h4 style={{ textTransform: 'capitalize', marginBottom: '1.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)', color: 'var(--accent)' }}>{day}</h4>
+                                <div className="grid-2" style={{ gap: '2rem' }}>
+                                    <div style={{ background: 'var(--bg-hover)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                        <h5 className="muted" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>🍽️</span> Comidas Principales
+                                        </h5>
+                                        <div className="flex-col" style={{ gap: '0.75rem' }}>
                                             {menuData[menuType].days[day].meals.map((m, i) => (
                                                 <input
                                                     key={i}
                                                     className="input"
+                                                    style={{ background: 'var(--bg)' }}
                                                     value={m}
                                                     onChange={e => handleMenuChange(day, 'meals', i, e.target.value)}
                                                     disabled={currentUser?.role !== 'superadmin'}
+                                                    placeholder={`Opción ${i + 1}`}
                                                 />
                                             ))}
                                         </div>
                                     </div>
-                                    <div>
-                                        <h5 className="muted">Postres</h5>
-                                        <div className="flex-col" style={{ marginTop: '0.5rem' }}>
+                                    <div style={{ background: 'var(--bg-hover)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                        <h5 className="muted" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>🍰</span> Opciones de Postre
+                                        </h5>
+                                        <div className="flex-col" style={{ gap: '0.75rem' }}>
                                             {menuData[menuType].days[day].desserts.map((d, i) => (
                                                 <input
                                                     key={i}
                                                     className="input"
+                                                    style={{ background: 'var(--bg)' }}
                                                     value={d}
                                                     onChange={e => handleMenuChange(day, 'desserts', i, e.target.value)}
                                                     disabled={currentUser?.role !== 'superadmin'}
+                                                    placeholder={`Opción ${i + 1}`}
                                                 />
                                             ))}
                                         </div>
@@ -747,7 +755,7 @@ export default function AdminDashboard() {
                                             <p className="muted">No hay datos para este dia.</p>
                                         ) : (
                                             <>
-                                                <div style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                                                <div className="card-glass" style={{ padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
                                                     <div className="flex-between" style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                                                         <h4 style={{ color: 'var(--accent)' }}>Resumen de Produccion (Total Dia)</h4>
                                                         <button
@@ -765,11 +773,11 @@ export default function AdminDashboard() {
                                                         </button>
                                                     </div>
                                                     <div className="grid-3" style={{ gap: '1rem' }}>
-                                                        <div className="card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px' }}>
+                                                        <div className="card" style={{ padding: '1rem', borderRadius: '8px' }}>
                                                             <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                                 <span style={{ fontSize: '1.2rem' }}>🍽️</span> Comidas:
                                                             </h5>
-                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
+                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem' }}>
                                                             {Object.entries(totals!.meals).map(([name, count]) => (
                                                                     <li key={name}>{name}: <strong>{count}</strong></li>
                                                                 ))}
@@ -778,21 +786,21 @@ export default function AdminDashboard() {
                                                                 </li>
                                                             </ul>
                                                         </div>
-                                                        <div className="card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px' }}>
+                                                        <div className="card" style={{ padding: '1rem', borderRadius: '8px' }}>
                                                             <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                                 <span style={{ fontSize: '1.2rem' }}>🍰</span> Postres:
                                                             </h5>
-                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
+                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem' }}>
                                                                 {Object.entries(totals!.desserts).map(([name, count]) => (
                                                                     <li key={name}>{name}: <strong>{count}</strong></li>
                                                                 ))}
                                                             </ul>
                                                         </div>
-                                                        <div className="card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <div className="card" style={{ padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                                             <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                                 <span style={{ fontSize: '1.2rem' }}>🥖</span> Extras:
                                                             </h5>
-                                                            <div style={{ fontSize: '1.5rem', color: 'var(--text)', textAlign: 'center' }}>
+                                                            <div style={{ fontSize: '1.5rem', textAlign: 'center' }}>
                                                                 Panes: <strong style={{ color: 'var(--accent)' }}>{totals!.bread}</strong>
                                                             </div>
                                                         </div>
@@ -803,7 +811,7 @@ export default function AdminDashboard() {
                                                 <div className="table-container">
                                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                                                         <thead>
-                                                            <tr style={{ background: 'var(--bg)', textAlign: 'left' }}>
+                                                            <tr style={{ background: 'var(--card)', textAlign: 'left' }}>
                                                                 <th style={{ padding: '0.75rem', borderBottom: '2px solid var(--border)' }}>Horario</th>
                                                                 <th style={{ padding: '0.75rem', borderBottom: '2px solid var(--border)' }}>Comidas</th>
                                                                 <th style={{ padding: '0.75rem', borderBottom: '2px solid var(--border)' }}>Postres</th>
@@ -858,8 +866,8 @@ export default function AdminDashboard() {
             }
 
             {selectedUserForModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={() => setSelectedUserForModal(null)}>
-                    <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem', overflowY: 'auto' }} onClick={() => setSelectedUserForModal(null)}>
+                    <div className="card" style={{ maxWidth: '400px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }} onClick={e => e.stopPropagation()}>
                         <button 
                             style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text)' }}
                             onClick={() => setSelectedUserForModal(null)}
@@ -910,10 +918,11 @@ export default function AdminDashboard() {
     )
 }
 
-function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: string, data: { funcNumber?: string, email?: string, phoneNumber?: string }) => void, onPhotoClick: (user: User) => void }) {
+function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: string, data: { funcNumber?: string, email?: string, phoneNumber?: string, documentId?: string }) => void, onPhotoClick: (user: User) => void }) {
     const [isEditing, setIsEditing] = useState(false)
     const [formData, setFormData] = useState({
         funcNumber: user.funcNumber || '',
+        documentId: user.documentId || '',
         email: user.email || '',
         phoneNumber: user.phoneNumber || ''
     })
@@ -921,6 +930,7 @@ function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: 
     useEffect(() => {
         setFormData({
             funcNumber: user.funcNumber || '',
+            documentId: user.documentId || '',
             email: user.email || '',
             phoneNumber: user.phoneNumber || ''
         })
@@ -980,6 +990,12 @@ function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: 
                             value={formData.funcNumber}
                             onChange={e => setFormData({ ...formData, funcNumber: e.target.value })}
                             placeholder="Nro Funcionario"
+                        />
+                        <input
+                            className="input"
+                            value={formData.documentId}
+                            onChange={e => setFormData({ ...formData, documentId: e.target.value })}
+                            placeholder="Documento (C.I.)"
                         />
                         <input
                             className="input"
