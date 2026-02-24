@@ -857,16 +857,29 @@ function UserRow({ user, onUpdate }: { user: User, onUpdate: (id: string, data: 
     return (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
             <div className="flex-between" style={{ alignItems: 'flex-start' }}>
-                <div>
-                    <strong>{user.name}</strong>
-                    <div className="muted" style={{ fontSize: '0.9rem' }}>{user.email}</div>
-                    {user.phoneNumber && <div className="muted" style={{ fontSize: '0.8rem' }}>Tel: {user.phoneNumber}</div>}
-                    
-                    {user.lastReservation ? (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--warning)', marginTop: '0.25rem' }}>Última reserva: {user.lastReservation}</div>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    {user.photoUrl ? (
+                        <img 
+                            src={user.photoUrl} 
+                            alt={user.name} 
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} 
+                        />
                     ) : (
-                        user.role === 'user' && <div style={{ fontSize: '0.8rem', color: 'var(--error)', marginTop: '0.25rem' }}>Nunca ha reservado</div>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                            {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
                     )}
+                    <div>
+                        <strong>{user.name}</strong>
+                        <div className="muted" style={{ fontSize: '0.9rem' }}>{user.email}</div>
+                        {user.phoneNumber && <div className="muted" style={{ fontSize: '0.8rem' }}>Tel: {user.phoneNumber}</div>}
+                        
+                        {user.lastReservation ? (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--warning)', marginTop: '0.25rem' }}>Última reserva: {user.lastReservation}</div>
+                        ) : (
+                            user.role === 'user' && <div style={{ fontSize: '0.8rem', color: 'var(--error)', marginTop: '0.25rem' }}>Nunca ha reservado</div>
+                        )}
+                    </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                     <span className="badge badge-gray">{user.funcNumber || 'S/N'}</span>

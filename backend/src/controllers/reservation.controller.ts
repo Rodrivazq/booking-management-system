@@ -160,6 +160,7 @@ export const getAllReservations = async (req: Request, res: Response) => {
             funcNumber: u.funcNumber,
             phoneNumber: u.phoneNumber,
             role: u.role,
+            photoUrl: u.photoUrl,
             lastReservation: u.reservations[0]?.weekStart || null
         }));
 
