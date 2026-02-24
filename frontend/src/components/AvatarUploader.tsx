@@ -91,6 +91,17 @@ export default function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameFor
 
     return (
         <>
+            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                <button 
+                    type="button" 
+                    className="btn btn-sm btn-secondary" 
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ fontSize: '0.9rem', width: '100%', maxWidth: '200px' }}
+                >
+                    📸 Cargar Foto
+                </button>
+            </div>
+
             <div
                 style={{
                     width: size,
@@ -129,17 +140,6 @@ export default function AvatarUploader({ currentPhotoUrl, onPhotoChange, nameFor
                 }}>
                     Cambiar
                 </div>
-            </div>
-            
-            <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
-                <button 
-                    type="button" 
-                    className="btn btn-sm btn-secondary" 
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ fontSize: '0.85rem' }}
-                >
-                    📷 Subir foto desde el movil o PC
-                </button>
             </div>
 
             <input
