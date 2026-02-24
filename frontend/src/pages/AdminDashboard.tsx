@@ -27,6 +27,7 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedResId, setExpandedResId] = useState<string | null>(null)
+    const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null)
 
     // Create User State
     const [showCreateUser, setShowCreateUser] = useState(false)
@@ -313,22 +314,27 @@ export default function AdminDashboard() {
                                         <img
                                             src={u.photoUrl}
                                             alt={u.name}
-                                            style={{ width: '3rem', height: '3rem', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
+                                            style={{ width: '3rem', height: '3rem', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', cursor: 'pointer' }}
+                                            onClick={() => setSelectedUserForModal(u)}
                                         />
                                     ) : (
-                                        <div style={{
-                                            width: '3rem',
-                                            height: '3rem',
-                                            borderRadius: '50%',
-                                            background: 'var(--accent)',
-                                            color: 'white',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: 'bold',
-                                            fontSize: '1.2rem',
-                                            flexShrink: 0
-                                        }}>
+                                        <div 
+                                            style={{
+                                                width: '3rem',
+                                                height: '3rem',
+                                                borderRadius: '50%',
+                                                background: 'var(--accent)',
+                                                color: 'white',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontWeight: 'bold',
+                                                fontSize: '1.2rem',
+                                                flexShrink: 0,
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={() => setSelectedUserForModal(u)}
+                                        >
                                             {u.name.charAt(0).toUpperCase()}
                                         </div>
                                     )}
@@ -478,7 +484,7 @@ export default function AdminDashboard() {
                                         u.email.toLowerCase().includes(term) ||
                                         (u.funcNumber && u.funcNumber.includes(term))
                                 }).map(u => (
-                                    <UserRow key={u.id} user={u} onUpdate={handleUpdateUser} />
+                                    <UserRow key={u.id} user={u} onUpdate={handleUpdateUser} onPhotoClick={setSelectedUserForModal} />
                                 ))}
                             </div>
                         </div>
@@ -829,11 +835,61 @@ export default function AdminDashboard() {
                     </>
                 )
             }
+
+            {selectedUserForModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={() => setSelectedUserForModal(null)}>
+                    <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                        <button 
+                            style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text)' }}
+                            onClick={() => setSelectedUserForModal(null)}
+                        >
+                            ×
+                        </button>
+                        
+                        {selectedUserForModal.photoUrl ? (
+                            <img 
+                                src={selectedUserForModal.photoUrl} 
+                                alt={selectedUserForModal.name} 
+                                style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--accent)', marginBottom: '1rem' }} 
+                            />
+                        ) : (
+                            <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '3rem', border: '4px solid var(--border)', marginBottom: '1rem' }}>
+                                {selectedUserForModal.name ? selectedUserForModal.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                        )}
+                        
+                        <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text)' }}>{selectedUserForModal.name}</h2>
+                        
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                            <span className="badge badge-gray" style={{ fontSize: '0.85rem' }}>Func: {selectedUserForModal.funcNumber || 'S/N'}</span>
+                            <span className={`badge ${selectedUserForModal.role === 'superadmin' ? 'badge-error' : selectedUserForModal.role === 'admin' ? 'badge-success' : 'badge-gray'}`} style={{ fontSize: '0.85rem' }}>
+                                {selectedUserForModal.role.toUpperCase()}
+                            </span>
+                        </div>
+                        
+                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.8rem', background: 'var(--bg-hover)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <span className="muted">Documento:</span>
+                                <strong>{selectedUserForModal.documentId || 'No registrado'}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                                <span className="muted">Email:</span>
+                                <strong>{selectedUserForModal.email}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span className="muted">Teléfono:</span>
+                                <strong>{selectedUserForModal.phoneNumber || 'No registrado'}</strong>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
         </Layout >
     )
 }
 
-function UserRow({ user, onUpdate }: { user: User, onUpdate: (id: string, data: { funcNumber?: string, email?: string, phoneNumber?: string }) => void }) {
+function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: string, data: { funcNumber?: string, email?: string, phoneNumber?: string }) => void, onPhotoClick: (user: User) => void }) {
     const [isEditing, setIsEditing] = useState(false)
     const [formData, setFormData] = useState({
         funcNumber: user.funcNumber || '',
@@ -862,10 +918,14 @@ function UserRow({ user, onUpdate }: { user: User, onUpdate: (id: string, data: 
                         <img 
                             src={user.photoUrl} 
                             alt={user.name} 
-                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} 
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', cursor: 'pointer' }}
+                            onClick={() => onPhotoClick(user)} 
                         />
                     ) : (
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                        <div 
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', cursor: 'pointer' }}
+                            onClick={() => onPhotoClick(user)}
+                        >
                             {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                         </div>
                     )}

@@ -46,10 +46,10 @@ export const updateUserDetails = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
-    const { name, email, password, funcNumber, phoneNumber, role, photoUrl } = req.body || {};
+    const { name, email, password, funcNumber, documentId, phoneNumber, role, photoUrl } = req.body || {};
     const creatorRole = req.user.role;
 
-    if (!name || !email || !password || !funcNumber || !photoUrl) return res.status(400).json({ error: 'Faltan datos obligatorios, incluyendo foto de perfil' });
+    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl) return res.status(400).json({ error: 'Faltan datos obligatorios, incluyendo foto de perfil y documento' });
 
     // Role validation
     if (role === 'superadmin' && creatorRole !== 'superadmin') {
@@ -59,12 +59,16 @@ export const createUser = async (req: Request, res: Response) => {
     try {
         const normalizedEmail = String(email).trim().toLowerCase();
         const normalizedFunc = String(funcNumber).replace(/\s+/g, '').toUpperCase();
+        const normalizedDoc = String(documentId).trim();
         
         const exists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (exists) return res.status(400).json({ error: 'El correo ya esta registrado' });
 
         const existsFunc = await prisma.user.findUnique({ where: { funcNumber: normalizedFunc } });
         if (existsFunc) return res.status(400).json({ error: 'Ese numero de funcionario ya esta registrado' });
+
+        const existsDoc = await prisma.user.findUnique({ where: { documentId: normalizedDoc } });
+        if (existsDoc) return res.status(400).json({ error: 'Ese documento ya esta registrado' });
 
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -75,6 +79,7 @@ export const createUser = async (req: Request, res: Response) => {
                 passwordHash,
                 role: role || 'user',
                 funcNumber: normalizedFunc,
+                documentId: normalizedDoc,
                 phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
                 photoUrl
             }

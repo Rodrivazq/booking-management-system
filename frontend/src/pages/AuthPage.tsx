@@ -19,6 +19,7 @@ export default function AuthPage() {
         password: '',
         name: '',
         funcNumber: '',
+        documentId: '',
         phoneNumber: '',
         identifier: '',
         confirmPassword: '',
@@ -62,7 +63,7 @@ export default function AuthPage() {
             const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
             const body = isLogin
                 ? { identifier: formData.identifier, password: formData.password, keepSession }
-                : { name: formData.name, email: formData.email, password: formData.password, funcNumber: formData.funcNumber, phoneNumber: formData.phoneNumber, photoUrl: formData.photoUrl }
+                : { name: formData.name, email: formData.email, password: formData.password, funcNumber: formData.funcNumber, documentId: formData.documentId, phoneNumber: formData.phoneNumber, photoUrl: formData.photoUrl }
 
             const res = await apiFetch<{ token: string, user: any }>(endpoint, {
                 method: 'POST',
@@ -212,15 +213,26 @@ export default function AuthPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Celular</label>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Documento (DNI/CI) Obligatorio</label>
                                     <input
                                         className="input"
-                                        name="phoneNumber"
-                                        value={formData.phoneNumber}
+                                        name="documentId"
+                                        value={formData.documentId}
                                         onChange={handleChange}
-                                        placeholder="099123456"
+                                        placeholder="12345678"
+                                        required
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Celular</label>
+                                <input
+                                    className="input"
+                                    name="phoneNumber"
+                                    value={formData.phoneNumber}
+                                    onChange={handleChange}
+                                    placeholder="099123456"
+                                />
                             </div>
                         </>
                     )}

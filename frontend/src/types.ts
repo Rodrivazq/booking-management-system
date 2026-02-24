@@ -4,6 +4,7 @@ export interface User {
   email: string
   role: 'admin' | 'user' | 'superadmin'
   funcNumber?: string
+  documentId?: string
   phoneNumber?: string
   photoUrl?: string
   preferences?: {

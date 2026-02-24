@@ -32,11 +32,12 @@ const getNextMonday = () => {
 };
 
 export const register = async (req: Request, res: Response) => {
-    const { name, email, password, funcNumber, phoneNumber, photoUrl } = req.body || {};
-    if (!name || !email || !password || !funcNumber || !photoUrl) return res.status(400).json({ error: 'Nombre, correo, contrasena, numero de funcionario y foto de perfil son obligatorios' });
+    const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl } = req.body || {};
+    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl) return res.status(400).json({ error: 'Nombre, correo, contrasena, numero de funcionario, documento y foto de perfil son obligatorios' });
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedFunc = String(funcNumber).replace(/\s+/g, '').toUpperCase();
+    const normalizedDoc = String(documentId).trim();
     
     // Validacion temporal (reemplazar con dominio real si aplica, ej. @empresa.com)
     const allowedDomains = ['empresa.com']; // CONFIGURAR EL DOMINIO REQUERIDO AQUÍ
@@ -48,12 +49,14 @@ export const register = async (req: Request, res: Response) => {
     // }
 
     try {
-        // Check email and funcNumber uniqueness manually if needed or rely on Prisma error
         const existingEmail = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (existingEmail) return res.status(400).json({ error: 'El correo ya esta registrado' });
 
         const existingFunc = await prisma.user.findUnique({ where: { funcNumber: normalizedFunc } });
         if (existingFunc) return res.status(400).json({ error: 'Ese numero de funcionario ya esta registrado' });
+
+        const existingDoc = await prisma.user.findUnique({ where: { documentId: normalizedDoc } });
+        if (existingDoc) return res.status(400).json({ error: 'El documento ya esta registrado' });
 
         const passwordHash = bcrypt.hashSync(password, 10);
         
@@ -64,6 +67,7 @@ export const register = async (req: Request, res: Response) => {
                 passwordHash,
                 role: 'user',
                 funcNumber: normalizedFunc,
+                documentId: normalizedDoc,
                 phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
                 photoUrl
             }

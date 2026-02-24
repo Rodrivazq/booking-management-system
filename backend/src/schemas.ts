@@ -5,6 +5,7 @@ export const registerSchema = z.object({
     email: z.string().email('Correo electrónico inválido'),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
     funcNumber: z.string().min(1, 'El número de funcionario es obligatorio').regex(/^[a-zA-Z0-9]+$/, 'El número de funcionario solo puede contener letras y números'),
+    documentId: z.string().min(1, 'El documento es obligatorio').regex(/^[0-9]+$/, 'El documento solo puede contener números'),
     phoneNumber: z.string().optional(),
 });
 
