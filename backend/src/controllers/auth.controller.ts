@@ -82,7 +82,7 @@ export const register = async (req: Request, res: Response) => {
         if (resend) {
             try {
                 await resend.emails.send({
-                    from: 'App de Reservas <acceso@resend.dev>',
+                    from: 'App de Reservas <no-reply@reservasrealsabor.com.uy>',
                     to: [user.email],
                     subject: 'Confirma tu correo electrónico',
                     html: `
@@ -222,7 +222,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
         if (resend) {
             try {
                 const data = await resend.emails.send({
-                    from: 'App de Reservas <acceso@resend.dev>', // You should verify a domain in Resend later
+                    from: 'App de Reservas <no-reply@reservasrealsabor.com.uy>',
                     to: [user.email],
                     subject: 'Restablecer contraseña',
                     html: `

@@ -60,7 +60,7 @@ export const startReminderJob = () => {
                     // Haremos envios asincronos en promesas
                     const emailPromises = usersWithoutReservation.map(user => {
                         return resend.emails.send({
-                            from: 'App de Reservas <acceso@resend.dev>',
+                            from: 'App de Reservas <no-reply@reservasrealsabor.com.uy>',
                             to: [user.email],
                             subject: isFinalDay ? '🔴 ÚLTIMO DÍA: Cierre de Reservas' : '⚠️ Recordatorio: Reserva tu menú de la próxima semana',
                             html: `
