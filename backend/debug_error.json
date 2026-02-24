@@ -1,0 +1,4 @@
+{
+  "message": "expected 500 to deeply equal 200",
+  "stack": "AssertionError: expected 500 to deeply equal 200\n    at C:/Users/rodri/Desktop/Aplicacion de reservas/backend/tests/auth.test.ts:20:32\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///C:/Users/rodri/Desktop/Aplicacion%20de%20reservas/backend/node_modules/@vitest/runner/dist/index.js:915:20"
+}
