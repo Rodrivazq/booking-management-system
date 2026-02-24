@@ -20,7 +20,10 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://booking-management-system-steel.vercel.app"
+      "https://booking-management-system-steel.vercel.app",
+      "https://reservasrealsabor.com.uy",
+      "https://www.reservasrealsabor.com.uy",
+      "https://api.reservasrealsabor.com.uy"
     ],
     credentials: true
   })
