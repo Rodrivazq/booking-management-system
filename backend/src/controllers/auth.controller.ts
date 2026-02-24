@@ -32,8 +32,8 @@ const getNextMonday = () => {
 };
 
 export const register = async (req: Request, res: Response) => {
-    const { name, email, password, funcNumber, phoneNumber } = req.body || {};
-    if (!name || !email || !password || !funcNumber) return res.status(400).json({ error: 'Nombre, correo, contrasena y numero de funcionario son obligatorios' });
+    const { name, email, password, funcNumber, phoneNumber, photoUrl } = req.body || {};
+    if (!name || !email || !password || !funcNumber || !photoUrl) return res.status(400).json({ error: 'Nombre, correo, contrasena, numero de funcionario y foto de perfil son obligatorios' });
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedFunc = String(funcNumber).replace(/\s+/g, '').toUpperCase();
@@ -64,7 +64,8 @@ export const register = async (req: Request, res: Response) => {
                 passwordHash,
                 role: 'user',
                 funcNumber: normalizedFunc,
-                phoneNumber: phoneNumber ? String(phoneNumber).trim() : null
+                phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
+                photoUrl
             }
         });
 

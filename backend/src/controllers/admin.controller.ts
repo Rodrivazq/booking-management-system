@@ -46,10 +46,10 @@ export const updateUserDetails = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
-    const { name, email, password, funcNumber, phoneNumber, role } = req.body || {};
+    const { name, email, password, funcNumber, phoneNumber, role, photoUrl } = req.body || {};
     const creatorRole = req.user.role;
 
-    if (!name || !email || !password || !funcNumber) return res.status(400).json({ error: 'Faltan datos obligatorios' });
+    if (!name || !email || !password || !funcNumber || !photoUrl) return res.status(400).json({ error: 'Faltan datos obligatorios, incluyendo foto de perfil' });
 
     // Role validation
     if (role === 'superadmin' && creatorRole !== 'superadmin') {
@@ -75,7 +75,8 @@ export const createUser = async (req: Request, res: Response) => {
                 passwordHash,
                 role: role || 'user',
                 funcNumber: normalizedFunc,
-                phoneNumber: phoneNumber ? String(phoneNumber).trim() : null
+                phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
+                photoUrl
             }
         });
 

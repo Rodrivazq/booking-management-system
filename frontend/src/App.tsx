@@ -13,6 +13,7 @@ import { useAuthStore } from './hooks/useAuthStore'
 import { useSettings } from './context/SettingsContext'
 import './styles/theme.css'
 import './styles/global.css'
+import LoadingScreen from './components/LoadingScreen'
 
 function PrivateRoute({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) {
   const user = useAuthStore(s => s.user)
@@ -27,7 +28,7 @@ export default function App() {
   const location = useLocation();
 
   if (loading || settingsLoading) {
-    return <div className="loading">Cargando...</div>;
+    return <LoadingScreen />
   }
 
   // Maintenance Mode Check

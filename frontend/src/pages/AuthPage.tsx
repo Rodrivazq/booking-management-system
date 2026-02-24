@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '../hooks/useAuthStore'
 import apiFetch from '../api'
 import ThemeToggle from '../components/ThemeToggle'
+import AvatarUploader from '../components/AvatarUploader'
 import { useToast } from '../context/ToastContext'
 
 import { useSettings } from '../context/SettingsContext'
@@ -20,7 +21,8 @@ export default function AuthPage() {
         funcNumber: '',
         phoneNumber: '',
         identifier: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        photoUrl: ''
     })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -53,10 +55,14 @@ export default function AuthPage() {
                 throw new Error('Las contraseñas no coinciden')
             }
 
+            if (!isLogin && !formData.photoUrl) {
+                throw new Error('Debes subir una foto de perfil obligatoriamente para registrarte')
+            }
+
             const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
             const body = isLogin
                 ? { identifier: formData.identifier, password: formData.password, keepSession }
-                : { name: formData.name, email: formData.email, password: formData.password, funcNumber: formData.funcNumber, phoneNumber: formData.phoneNumber }
+                : { name: formData.name, email: formData.email, password: formData.password, funcNumber: formData.funcNumber, phoneNumber: formData.phoneNumber, photoUrl: formData.photoUrl }
 
             const res = await apiFetch<{ token: string, user: any }>(endpoint, {
                 method: 'POST',
@@ -159,6 +165,15 @@ export default function AuthPage() {
                         </div>
                     ) : (
                         <>
+                            <div style={{ paddingBottom: '1rem', textAlign: 'center' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil (Obligatoria)</label>
+                                <AvatarUploader 
+                                    currentPhotoUrl={formData.photoUrl}
+                                    onPhotoChange={(url) => setFormData(prev => ({ ...prev, photoUrl: url }))}
+                                    nameForInitials={formData.name || 'U'}
+                                    size="100px"
+                                />
+                            </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre Completo</label>
                                 <input

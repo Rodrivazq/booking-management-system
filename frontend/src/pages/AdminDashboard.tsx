@@ -7,6 +7,7 @@ import { Menu, Reservation, User } from '../types'
 import { useAuthStore } from '../hooks/useAuthStore'
 import Skeleton from '../components/Skeleton'
 import { useToast } from '../context/ToastContext'
+import AvatarUploader from '../components/AvatarUploader'
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 
@@ -35,12 +36,13 @@ export default function AdminDashboard() {
         password: '',
         funcNumber: '',
         phoneNumber: '',
-        role: 'user' as 'user' | 'admin' | 'superadmin'
+        role: 'user' as 'user' | 'admin' | 'superadmin',
+        photoUrl: ''
     })
 
     const handleCreateUser = async () => {
-        if (!newUser.name || !newUser.email || !newUser.password || !newUser.funcNumber) {
-            error('Por favor completa todos los campos obligatorios')
+        if (!newUser.name || !newUser.email || !newUser.password || !newUser.funcNumber || !newUser.photoUrl) {
+            error('Por favor completa todos los campos obligatorios, incluyendo la foto de perfil')
             return
         }
         try {
@@ -50,7 +52,7 @@ export default function AdminDashboard() {
             })
             success('Usuario creado exitosamente')
             setShowCreateUser(false)
-            setNewUser({ name: '', email: '', password: '', funcNumber: '', phoneNumber: '', role: 'user' })
+            setNewUser({ name: '', email: '', password: '', funcNumber: '', phoneNumber: '', role: 'user', photoUrl: '' })
             loadData()
         } catch (e: any) {
             error(e.message)
@@ -441,6 +443,15 @@ export default function AdminDashboard() {
                             {showCreateUser && (
                                 <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'var(--bg)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                                     <h4 style={{ marginBottom: '1rem' }}>Nuevo Usuario</h4>
+                                    <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil (Obligatoria)</label>
+                                        <AvatarUploader 
+                                            currentPhotoUrl={newUser.photoUrl}
+                                            onPhotoChange={(url) => setNewUser(prev => ({ ...prev, photoUrl: url }))}
+                                            nameForInitials={newUser.name || 'U'}
+                                            size="100px"
+                                        />
+                                    </div>
                                     <div className="grid-2" style={{ gap: '1rem' }}>
                                         <input className="input" placeholder="Nombre Completo" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
                                         <input className="input" placeholder="Email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
