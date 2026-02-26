@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://api.reservasrealsabor.com.uy/api/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
