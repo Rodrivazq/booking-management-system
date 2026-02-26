@@ -1,4 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
+// En producción, usamos un string vacío para que la petición sea relativa al mismo dominio (Vercel)
+// y pase por nuestro proxy api/[...path].js. En desarrollo local, usamos localhost:3001.
+const API_BASE = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_BASE || 'http://localhost:3001');
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token');
