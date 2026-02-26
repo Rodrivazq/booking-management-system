@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+
 import authRoutes from './routes/auth.routes';
 import menuRoutes from './routes/menu.routes';
 import reservationRoutes from './routes/reservation.routes';
@@ -9,30 +10,61 @@ import qrRoutes from './routes/qr.routes';
 import reportsRoutes from './routes/reportsRoutes';
 import settingsRoutes from './routes/settings.routes';
 import statsRoutes from './routes/stats.routes';
+
 import { startReminderJob } from './jobs/reminder.job';
 
 const app = express();
 
-// Iniciar CronJob de Verificaciones en Background
+// -----------------------------
+// CRON JOB
+// -----------------------------
 startReminderJob();
+
+// -----------------------------
+// CORS CONFIGURACIÓN PRO
+// -----------------------------
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://booking-management-system-steel.vercel.app",
+  "https://booking-management-system-6abdf58vx.vercel.app", // tu dominio actual de Vercel
+  "https://reservasrealsabor.com.uy",
+  "https://www.reservasrealsabor.com.uy",
+];
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://booking-management-system-steel.vercel.app",
-      "https://reservasrealsabor.com.uy",
-      "https://www.reservasrealsabor.com.uy",
-      "https://api.reservasrealsabor.com.uy"
-    ],
-    credentials: true
+    origin: (origin, callback) => {
+      // Permite requests sin origin (Postman, backend-to-backend)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.error("CORS bloqueado para:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Manejo explícito del preflight
+app.options("*", cors());
+
+// -----------------------------
+// MIDDLEWARES
+// -----------------------------
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Routes
+// -----------------------------
+// ROUTES
+// -----------------------------
+
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/reservations', reservationRoutes);
@@ -42,19 +74,26 @@ app.use('/api/qr', qrRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 
-app.get('/api/health', (_req, res) => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (8 - day) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + diff);
-    nextMonday.setHours(0, 0, 0, 0);
+// -----------------------------
+// HEALTH CHECK
+// -----------------------------
 
-    res.json({ ok: true, nextMonday: nextMonday.toISOString().slice(0, 10) });
+app.get('/api/health', (_req, res) => {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = (8 - day) % 7 || 7;
+  const nextMonday = new Date(today);
+  nextMonday.setDate(today.getDate() + diff);
+  nextMonday.setHours(0, 0, 0, 0);
+
+  res.json({
+    ok: true,
+    nextMonday: nextMonday.toISOString().slice(0, 10),
+  });
 });
 
 app.get('/', (_req, res) => {
-    res.send('Backend API Running');
+  res.send('Backend API Running');
 });
 
 export default app;
