@@ -16,55 +16,56 @@ import { startReminderJob } from './jobs/reminder.job';
 const app = express();
 
 // -----------------------------
-// CRON JOB
+// CRON JOB (no tumbar el server si falla)
 // -----------------------------
-startReminderJob();
+try {
+  startReminderJob();
+} catch (e) {
+  console.error("Reminder job failed to start:", e);
+}
 
 // -----------------------------
 // CORS CONFIGURACIÓN PRO
 // -----------------------------
-
 const allowedOrigins = [
   "http://localhost:5173",
   "https://booking-management-system-steel.vercel.app",
-  "https://booking-management-system-6abdf58vx.vercel.app", // tu dominio actual de Vercel
+  "https://booking-management-system-6abdf58vx.vercel.app",
   "https://reservasrealsabor.com.uy",
   "https://www.reservasrealsabor.com.uy",
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Permite requests sin origin (Postman, backend-to-backend)
-      if (!origin) return callback(null, true);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Permite requests sin origin (Postman, curl, backend-to-backend)
+    if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-      console.error("CORS bloqueado para:", origin);
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+    console.error("CORS bloqueado para:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-// Manejo explícito del preflight
-app.options("*", cors());
+app.use(cors(corsOptions));
+
+// Preflight con la MISMA config
+app.options("*", cors(corsOptions));
 
 // -----------------------------
 // MIDDLEWARES
 // -----------------------------
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // -----------------------------
 // ROUTES
 // -----------------------------
-
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/reservations', reservationRoutes);
@@ -77,7 +78,6 @@ app.use('/api/settings', settingsRoutes);
 // -----------------------------
 // HEALTH CHECK
 // -----------------------------
-
 app.get('/api/health', (_req, res) => {
   const today = new Date();
   const day = today.getDay();
