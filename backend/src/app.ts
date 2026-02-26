@@ -15,57 +15,42 @@ import { startReminderJob } from './jobs/reminder.job';
 
 const app = express();
 
-// -----------------------------
-// CRON JOB (no tumbar el server si falla)
-// -----------------------------
-try {
-  startReminderJob();
-} catch (e) {
-  console.error("Reminder job failed to start:", e);
-}
+startReminderJob();
 
-// -----------------------------
-// CORS CONFIGURACIÓN PRO
-// -----------------------------
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://booking-management-system-steel.vercel.app",
-  "https://booking-management-system-6abdf58vx.vercel.app",
-  "https://reservasrealsabor.com.uy",
-  "https://www.reservasrealsabor.com.uy",
-];
+// ---- CORS PRO ----
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'https://reservasrealsabor.com.uy',
+  'https://www.reservasrealsabor.com.uy',
+]);
+
+const vercelPreviewRegex = /^https:\/\/booking-management-system-[a-z0-9-]+\.vercel\.app$/;
 
 const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    // Permite requests sin origin (Postman, curl, backend-to-backend)
-    if (!origin) return callback(null, true);
+  origin: (origin, cb) => {
+    // Permite requests sin origin (Postman, server-to-server, etc.)
+    if (!origin) return cb(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    const ok = allowedOrigins.has(origin) || vercelPreviewRegex.test(origin);
 
-    console.error("CORS bloqueado para:", origin);
-    return callback(new Error("Not allowed by CORS"));
+    // MUY IMPORTANTE: si no está permitido, NO tires error.
+    // Devolvé "false" para que CORS lo bloquee sin romper nada.
+    return cb(null, ok);
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
+// preflight usando *las mismas opciones*
+app.options('*', cors(corsOptions));
 
-// Preflight con la MISMA config
-app.options("*", cors(corsOptions));
-
-// -----------------------------
-// MIDDLEWARES
-// -----------------------------
+// ---- Middlewares ----
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// -----------------------------
-// ROUTES
-// -----------------------------
+// ---- Routes ----
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/reservations', reservationRoutes);
@@ -75,9 +60,6 @@ app.use('/api/qr', qrRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 
-// -----------------------------
-// HEALTH CHECK
-// -----------------------------
 app.get('/api/health', (_req, res) => {
   const today = new Date();
   const day = today.getDay();
@@ -86,10 +68,7 @@ app.get('/api/health', (_req, res) => {
   nextMonday.setDate(today.getDate() + diff);
   nextMonday.setHours(0, 0, 0, 0);
 
-  res.json({
-    ok: true,
-    nextMonday: nextMonday.toISOString().slice(0, 10),
-  });
+  res.json({ ok: true, nextMonday: nextMonday.toISOString().slice(0, 10) });
 });
 
 app.get('/', (_req, res) => {
