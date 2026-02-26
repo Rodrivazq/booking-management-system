@@ -17,24 +17,38 @@ const app = express();
 
 startReminderJob();
 
-// ---- CORS PRO ----
+// -----------------------------
+// CORS PRO (dominio final + localhost + previews de Vercel)
+// -----------------------------
+
 const allowedOrigins = new Set([
   'http://localhost:5173',
   'https://reservasrealsabor.com.uy',
   'https://www.reservasrealsabor.com.uy',
 ]);
 
-const vercelPreviewRegex = /^https:\/\/booking-management-system-[a-z0-9-]+\.vercel\.app$/;
+const isAllowedOrigin = (origin: string) => {
+  if (allowedOrigins.has(origin)) return true;
+
+  try {
+    const url = new URL(origin);
+    // acepta cualquier preview de Vercel
+    if (url.protocol === 'https:' && url.hostname.endsWith('.vercel.app')) return true;
+  } catch {
+    // origin inválido => bloqueado
+  }
+
+  return false;
+};
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, cb) => {
-    // Permite requests sin origin (Postman, server-to-server, etc.)
+    // Permite requests sin origin (Postman / server-to-server)
     if (!origin) return cb(null, true);
 
-    const ok = allowedOrigins.has(origin) || vercelPreviewRegex.test(origin);
+    const ok = isAllowedOrigin(origin);
 
-    // MUY IMPORTANTE: si no está permitido, NO tires error.
-    // Devolvé "false" para que CORS lo bloquee sin romper nada.
+    // IMPORTANTE: NO tirar error, devolver true/false
     return cb(null, ok);
   },
   credentials: true,
@@ -43,14 +57,19 @@ const corsOptions: cors.CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-// preflight usando *las mismas opciones*
 app.options('*', cors(corsOptions));
 
-// ---- Middlewares ----
+// -----------------------------
+// MIDDLEWARES
+// -----------------------------
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ---- Routes ----
+// -----------------------------
+// ROUTES
+// -----------------------------
+
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/reservations', reservationRoutes);
@@ -59,6 +78,10 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
+
+// -----------------------------
+// HEALTH CHECK
+// -----------------------------
 
 app.get('/api/health', (_req, res) => {
   const today = new Date();
