@@ -188,7 +188,10 @@ export default function AuthPage() {
                                 <AvatarUploader 
                                     ref={avatarRef}
                                     currentPhotoUrl={formData.photoUrl}
-                                    onPhotoChange={(url) => setFormData(prev => ({ ...prev, photoUrl: url }))}
+                                    onPhotoChange={(url) => {
+                                        setFormData(prev => ({ ...prev, photoUrl: url }))
+                                        if (url && error.includes('foto')) setError('')
+                                    }}
                                     nameForInitials={formData.name || 'U'}
                                     size="100px"
                                 />
@@ -342,8 +345,14 @@ export default function AuthPage() {
                     )}
 
                     {error && (
-                        <div className="badge" style={{ background: '#fee2e2', color: '#991b1b', width: '100%', justifyContent: 'center', padding: '0.75rem' }}>
+                        <div className="badge" style={{ background: '#fee2e2', color: '#991b1b', width: '100%', justifyContent: 'center', padding: '0.75rem', marginBottom: '1rem', whiteSpace: 'normal', display: 'block', textAlign: 'center' }}>
                             {error}
+                        </div>
+                    )}
+
+                    {!isLogin && formData.photoUrl && !error && (
+                        <div className="badge animate-fade-in" style={{ background: '#dcfce7', color: '#166534', width: '100%', justifyContent: 'center', padding: '0.75rem', marginBottom: '1rem', whiteSpace: 'normal', display: 'block', textAlign: 'center' }}>
+                            ✅ Foto subida exitosamente. Ya puedes crear tu cuenta.
                         </div>
                     )}
 
