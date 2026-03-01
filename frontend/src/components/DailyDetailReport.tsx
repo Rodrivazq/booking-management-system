@@ -46,7 +46,7 @@ export default function DailyDetailReport({ reservations, users, date, slot }: D
         return (
             <div className="print-container">
                 <h1>Reporte de Turno ({slot})</h1>
-                <h3>Fecha: {date} ({dayName})</h3>
+                <h3>Fecha: {date.split('-').reverse().join('/')} ({dayName})</h3>
 
                 <table className="print-table">
                     <thead>
@@ -98,7 +98,7 @@ export default function DailyDetailReport({ reservations, users, date, slot }: D
     return (
         <div className="print-container">
             <h1>Reporte de Produccion Diario (Comanda)</h1>
-            <h3>Fecha: {date} ({dayName})</h3>
+            <h3>Fecha: {date.split('-').reverse().join('/')} ({dayName})</h3>
 
             <table className="print-table">
                 <thead>

@@ -186,14 +186,12 @@ export default function UserDashboard() {
         const start = new Date(y, m - 1, d)
         const end = new Date(y, m - 1, d + 4) // Friday
 
-        const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
 
         const startDay = start.getDate().toString().padStart(2, '0')
         const endDay = end.getDate().toString().padStart(2, '0')
-        const month = months[end.getMonth()]
-        const year = end.getFullYear()
 
-        return `Semana del lunes ${startDay} al viernes ${endDay} de ${month} de ${year}`
+        return `Semana del lunes ${startDay}/${(start.getMonth() + 1).toString().padStart(2, '0')}/${start.getFullYear()} al viernes ${endDay}/${(end.getMonth() + 1).toString().padStart(2, '0')}/${end.getFullYear()}`
     }
 
     return (

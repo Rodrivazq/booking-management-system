@@ -160,7 +160,7 @@ export default function AuthPage() {
                 <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
                     <ThemeToggle />
                 </div>
-                <div className="auth-header">
+                <div className="auth-header" style={{ marginTop: '2.5rem' }}>
                     <h2>{isLogin ? 'Bienvenido de nuevo' : 'Crear Cuenta'}</h2>
                     <p className="muted">
                         {isLogin ? 'Ingresa tus credenciales para acceder a tu panel.' : 'Registrate para comenzar a gestionar tus reservas.'}
