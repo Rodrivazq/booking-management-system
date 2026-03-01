@@ -56,7 +56,7 @@ async function migrateData() {
                 logoUrl: db.settings.logoUrl,
                 primaryColor: db.settings.primaryColor,
                 secondaryColor: db.settings.secondaryColor,
-                deadlineDay: db.settings.deadlineDay !== undefined ? db.settings.deadlineDay : 3,
+                deadlineDay: db.settings.deadlineDay !== undefined ? db.settings.deadlineDay : 4,
                 deadlineTime: db.settings.deadlineTime || "23:59",
                 supportEmail: db.settings.supportEmail,
                 supportPhone: db.settings.supportPhone,

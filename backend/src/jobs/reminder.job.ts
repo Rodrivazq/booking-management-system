@@ -5,15 +5,7 @@ import { RESEND_API_KEY, FRONTEND_URL } from '../config/env';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
-const getNextMonday = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (8 - day) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + diff);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday.toISOString().slice(0, 10);
-};
+import { getNextMonday } from '../utils/dates';
 
 export const startReminderJob = () => {
     // Se ejecuta todos los dias a las 09:00 AM hora del servidor
@@ -24,7 +16,7 @@ export const startReminderJob = () => {
             const settings = await prisma.settings.findUnique({ where: { id: 1 } });
             if (!settings) return;
 
-            const deadlineDay = settings.deadlineDay !== undefined ? settings.deadlineDay : 3;
+            const deadlineDay = settings.deadlineDay !== undefined ? settings.deadlineDay : 4;
             const now = new Date();
             const dayOfWeek = now.getDay();
             

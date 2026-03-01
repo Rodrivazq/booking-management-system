@@ -4,15 +4,7 @@ import app from '../src/app';
 import prisma from '../src/utils/prisma';
 import fs from 'fs';
 
-const getNextMonday = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (8 - day) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + diff);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday.toISOString().slice(0, 10);
-};
+import { getNextMonday } from '../src/utils/dates';
 
 describe('Reservation Endpoints', () => {
   let token: string;

@@ -1,15 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 
-const getNextMonday = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (8 - day) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + diff);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday.toISOString().slice(0, 10);
-};
+import { getNextMonday } from '../utils/dates';
 
 export const getStats = async (req: Request, res: Response) => {
     console.log('ReportsController: Request received', req.query);

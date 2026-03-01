@@ -3,15 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import prisma from '../utils/prisma';
 import { DAY_KEYS, TIME_SLOTS } from '../utils/db'; // Still need constants
 
-const getNextMonday = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (8 - day) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + diff);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday.toISOString().slice(0, 10);
-};
+import { getNextMonday } from '../utils/dates';
 
 export const createReservation = async (req: Request, res: Response) => {
     const { selections, weekStart, timeSlot } = req.body || {};
@@ -22,7 +14,7 @@ export const createReservation = async (req: Request, res: Response) => {
     try {
         // Enforce deadline: Close reservations based on settings
         const settings = await prisma.settings.findUnique({ where: { id: 1 } });
-        const deadlineDay = settings?.deadlineDay !== undefined ? settings.deadlineDay : 3; // Default Wednesday
+        const deadlineDay = settings?.deadlineDay !== undefined ? settings.deadlineDay : 4; // Default Thursday
         const deadlineTime = settings?.deadlineTime || '23:59';
 
         const now = new Date();

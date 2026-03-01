@@ -223,12 +223,12 @@ export default function UserDashboard() {
                         <p>Horario: {myRes.timeSlot}</p>
                         {canEdit ? (
                             <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                                Puedes modificar tu reserva hasta el miercoles.
+                                Puedes modificar tu reserva hasta el jueves 23:59.
                             </p>
                         ) : (
-                            <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                                Ya no puedes modificar esta reserva (Cierre: Miercoles).
-                            </p>
+                             <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                                 Ya no puedes modificar esta reserva (Cierre: Jueves 23:59).
+                             </p>
                         )}
                     </div>
                 ) : (
@@ -238,7 +238,7 @@ export default function UserDashboard() {
                                 <h3>No has hecho la reserva</h3>
                                 <p className="muted">Completa el formulario para reservar.</p>
                                 <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: 500 }}>
-                                    Nota: Tienes tiempo hasta el miercoles para realizar o modificar tu pedido.
+                                    Nota: Tienes tiempo hasta las 23:59 del jueves para realizar o modificar tu pedido.
                                 </p>
                             </>
                         ) : (
@@ -246,7 +246,7 @@ export default function UserDashboard() {
                                 <h3>Reserva no disponible</h3>
                                 <p className="muted">
                                     {isNextWeek
-                                        ? 'El periodo de reserva para la proxima semana ha finalizado (Cierra los Miercoles).'
+                                        ? 'El periodo de reserva para la proxima semana ha finalizado (Cierra los Jueves 23:59).'
                                         : 'El menu de la semana actual no se puede modificar.'}
                                 </p>
                             </>
