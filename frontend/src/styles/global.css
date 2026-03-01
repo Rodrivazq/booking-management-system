@@ -289,7 +289,6 @@ p {
   width: 3rem;
   height: 3rem;
   background: linear-gradient(135deg, #16a34a, #15803d);
-  /* Stronger green gradient */
   border-radius: 1rem;
   display: grid;
   place-items: center;
@@ -297,6 +296,19 @@ p {
   font-size: 1.5rem;
   box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.3);
   flex-shrink: 0;
+}
+
+.premium-logo {
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 4px;
+  object-fit: contain;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.15);
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .premium-logo {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .badge {
