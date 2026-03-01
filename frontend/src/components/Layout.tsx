@@ -5,6 +5,7 @@ import HelpButton from './HelpButton'
 import ThemeToggle from './ThemeToggle'
 import { useSettings } from '../context/SettingsContext'
 import AnnouncementBanner from './AnnouncementBanner'
+import apiFetch from '../api'
 
 interface LayoutProps {
     children: ReactNode
@@ -25,7 +26,21 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
     }
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [qrModalOpen, setQrModalOpen] = useState(false)
+    const [qrCode, setQrCode] = useState('')
 
+    const handleOpenQR = async () => {
+        setQrModalOpen(true)
+        setMobileMenuOpen(false)
+        if (!qrCode) {
+            try {
+                const res = await apiFetch<{ dataUrl: string }>('/api/qr')
+                setQrCode(res.dataUrl)
+            } catch (error) {
+                console.error(error)
+            }
+        }
+    }
     return (
         <div className="page animate-fade-in">
             <AnnouncementBanner />
@@ -61,6 +76,14 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
                 <div className="hide-mobile" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', borderRight: '1px solid var(--border)', paddingRight: '1rem' }}>
                         <ThemeToggle />
+                        <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0 0.75rem' }}
+                            onClick={handleOpenQR}
+                            title="Compartir App con QR"
+                        >
+                            📱 Compartir
+                        </button>
                         <HelpButton />
                     </div>
 
@@ -141,6 +164,13 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
                                 ❓ Ayuda y Documentación
                             </button>
                         } />
+                        <button
+                            onClick={handleOpenQR}
+                            className="btn btn-secondary"
+                            style={{ width: '100%', justifyContent: 'flex-start', gap: '0.5rem', border: 'none' }}
+                        >
+                            📱 Compartir App
+                        </button>
 
                         {user && (
                             <button
@@ -174,6 +204,23 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
             <main>
                 {children}
             </main>
+
+            {qrModalOpen && (
+                <div className="modal-backdrop" onClick={() => setQrModalOpen(false)}>
+                    <div className="card" style={{ maxWidth: '400px', width: '90%', margin: 'auto', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ marginBottom: '1rem' }}>🚀 Compartir Acceso a la App</h3>
+                        <p className="muted" style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>Pídele a tus compañeros que escaneen este código con la cámara de su celular para abrir el sistema inmediatamente.</p>
+                        <div style={{ background: 'white', padding: '1rem', borderRadius: '1rem', display: 'inline-block', marginBottom: '1.5rem' }}>
+                            {qrCode ? (
+                                <img src={qrCode} alt="App QR" style={{ width: '250px', height: '250px', display: 'block' }} />
+                            ) : (
+                                <div style={{ width: '250px', height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Cargando QR...</div>
+                            )}
+                        </div>
+                        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setQrModalOpen(false)}>Cerrar</button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import QRCode from 'qrcode';
-import { BASE_URL } from '../config/env';
+import { FRONTEND_URL } from '../config/env';
 
 export const generateQR = async (req: Request, res: Response) => {
-    const url = req.query.url || BASE_URL;
+    const url = req.query.url || FRONTEND_URL;
     try {
         const dataUrl = await QRCode.toDataURL(String(url), { width: 320 });
         res.json({ dataUrl, url });
