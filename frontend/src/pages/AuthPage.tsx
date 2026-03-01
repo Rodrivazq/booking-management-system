@@ -133,9 +133,9 @@ export default function AuthPage() {
             <div className="auth-hero" style={settings.loginBackgroundImage ? { backgroundImage: `url(${settings.loginBackgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
                 <div className="auth-hero-content" style={settings.loginBackgroundImage ? { background: 'rgba(0,0,0,0.6)', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '4rem' } : {}}>
                     {settings.logoUrl ? (
-                        <img src={settings.logoUrl} alt="Logo" style={{ width: '8rem', height: '8rem', objectFit: 'cover', borderRadius: '50%', marginBottom: '2rem', border: '3px solid rgba(255,255,255,0.3)', background: 'white' }} />
+                        <img src={settings.logoUrl} alt="Logo" style={{ width: '8rem', height: '8rem', objectFit: 'contain', marginBottom: '2rem' }} />
                     ) : (
-                        <img src="/assets/logo_real_sabor_clean.png" alt="Logo" style={{ width: '8rem', height: '8rem', objectFit: 'cover', borderRadius: '50%', marginBottom: '2rem', border: '3px solid rgba(255,255,255,0.3)', background: 'white' }} />
+                        <img src="/assets/logo_real_sabor_clean.png" alt="Logo" style={{ width: '8rem', height: '8rem', objectFit: 'contain', marginBottom: '2rem' }} />
                     )}
                     <h1>{settings.welcomeTitle || settings.companyName}</h1>
                     <p>{settings.welcomeMessage || 'Gestiona tus comidas diarias de forma eficiente. Planifica tu semana y disfruta de un servicio de comedor de primera clase.'}</p>

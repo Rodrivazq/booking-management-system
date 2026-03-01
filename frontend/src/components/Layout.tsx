@@ -43,9 +43,9 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
                     title="Volver al Inicio"
                 >
                     {settings.logoUrl ? (
-                        <img src={settings.logoUrl} alt="Logo" className="logo-icon" style={{ objectFit: 'cover', borderRadius: '50%', background: 'white' }} />
+                        <img src={settings.logoUrl} alt="Logo" className="logo-icon" style={{ objectFit: 'contain' }} />
                     ) : (
-                        <img src="/assets/logo_real_sabor_clean.png" alt="Logo" className="logo-icon" style={{ objectFit: 'cover', borderRadius: '50%', background: 'white' }} />
+                        <img src="/assets/logo_real_sabor_clean.png" alt="Logo" className="logo-icon" style={{ objectFit: 'contain' }} />
                     )}
                     <div>
                         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{settings.companyName}</h1>
