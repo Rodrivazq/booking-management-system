@@ -379,6 +379,13 @@ p {
   border-bottom: 2px solid var(--border);
   margin-bottom: 1.5rem;
   overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
 }
 
 .nav-tab {
@@ -393,6 +400,7 @@ p {
   transition: all 0.2s;
   margin-bottom: -2px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-tab:hover {

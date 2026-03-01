@@ -83,7 +83,7 @@ export default function AdminSettingsPage() {
             </div>
             <div className="card" style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 <form onSubmit={handleSubmit}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', alignItems: 'start' }}>
+                    <div className="grid-2" style={{ alignItems: 'start' }}>
                         {/* Left Column */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                             {/* General Settings */}

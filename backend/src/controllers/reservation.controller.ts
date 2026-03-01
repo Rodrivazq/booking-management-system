@@ -24,14 +24,21 @@ export const createReservation = async (req: Request, res: Response) => {
         const currentDayAdjusted = dayOfWeek === 0 ? 7 : dayOfWeek;
         const deadlineDayAdjusted = deadlineDay === 0 ? 7 : deadlineDay;
 
-        if (currentDayAdjusted > deadlineDayAdjusted) {
-            isClosed = true;
-        } else if (currentDayAdjusted === deadlineDayAdjusted) {
-            const [h, m] = deadlineTime.split(':').map(Number);
-            const deadlineDate = new Date(now);
-            deadlineDate.setHours(h, m, 0, 0);
-            if (now > deadlineDate) {
+        // Si es fin de semana (Sábado o Domingo), el "Week Shift" ya ocurrió.
+        // Esto significa que la semana "expectedWeek" siempre es la semana próxima y está a varios días del cierre.
+        // Por lo tanto, en fines de semana las reservas SIEMPRE están abiertas para la siguiente ronda.
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+        if (!isWeekend) {
+            if (currentDayAdjusted > deadlineDayAdjusted) {
                 isClosed = true;
+            } else if (currentDayAdjusted === deadlineDayAdjusted) {
+                const [h, m] = deadlineTime.split(':').map(Number);
+                const deadlineDate = new Date(now);
+                deadlineDate.setHours(h, m, 0, 0);
+                if (now > deadlineDate) {
+                    isClosed = true;
+                }
             }
         }
 

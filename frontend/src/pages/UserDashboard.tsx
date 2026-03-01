@@ -157,7 +157,8 @@ export default function UserDashboard() {
     const deadlineDay = settings.deadlineDay === 0 ? 7 : settings.deadlineDay
 
     const isNextWeek = viewMode === 'next'
-    const isReservationOpen = isNextWeek && (currentDay <= deadlineDay)
+    const isWeekend = today === 0 || today === 6;
+    const isReservationOpen = isNextWeek && (isWeekend || currentDay <= deadlineDay)
     const canEdit = isNextWeek ? isReservationOpen : false
 
     // Status Message
