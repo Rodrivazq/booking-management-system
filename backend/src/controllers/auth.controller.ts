@@ -177,7 +177,8 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const expiresIn = keepSession ? '30d' : '12h';
-        const token = jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber, photoUrl: user.photoUrl }, JWT_SECRET, { expiresIn });
+        // IMPORTANT: Do NOT put photoUrl in JWT payload, it breaks HTTP Header limits if it's Base64!
+        const token = jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber }, JWT_SECRET, { expiresIn });
         res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, funcNumber: user.funcNumber, phoneNumber: user.phoneNumber, photoUrl: user.photoUrl } });
     } catch (error) {
         console.error('Login error:', error);

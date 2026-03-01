@@ -1,0 +1,20 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 1780
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Origin: https://reservasrealsabor.com.uy
+Content-Type: application/json; charset=utf-8
+Etag: W/"6f4-XZhYwbC329eA7AOOH1o/2cnLyx8"
+Server: railway-edge
+X-Powered-By: Express
+X-Railway-Edge: railway/us-east4-eqdc4a
+X-Railway-Request-Id: o0dU6A2dTVOunttI8u2xcg
+Accept-Ranges: bytes
+Date: Sun, 01 Mar 2026 16:11:49 GMT
+Via: 1.1 varnish
+X-Cache: MISS
+X-Cache-Hits: 0
+X-Timer: S1772381509.202784,VS0,VE146
+Vary: Origin
+X-Railway-CDN-Edge: fastly/cache-eze2230024-EZE
+
