@@ -7,7 +7,7 @@ import { Resend } from 'resend';
 import prisma from '../utils/prisma';
 import logger from '../utils/logger';
 import { verifyTurnstileToken } from '../utils/turnstile';
-import { JWT_SECRET, FRONTEND_URL, SMTP, RESEND_API_KEY } from '../config/env';
+import { JWT_SECRET, FRONTEND_URL, SMTP, RESEND_API_KEY, TURNSTILE_SECRET_KEY } from '../config/env';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
@@ -35,12 +35,18 @@ const getNextMonday = () => {
 
 export const register = async (req: Request, res: Response) => {
     const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl, turnstileToken } = req.body || {};
-    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl || !turnstileToken) {
-        return res.status(400).json({ error: 'Todos los campos obligatorios incluyendo verificación antibot son requeridos' });
+    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl) {
+        return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
     }
 
-    const isValidToken = await verifyTurnstileToken(turnstileToken, req.ip || '');
-    if (!isValidToken) return res.status(400).json({ error: 'Validación anti-bot fallida.' });
+    if (TURNSTILE_SECRET_KEY && !turnstileToken) {
+        return res.status(400).json({ error: 'Validación antibot requerida' });
+    }
+
+    if (TURNSTILE_SECRET_KEY || turnstileToken) {
+        const isValidToken = await verifyTurnstileToken(turnstileToken, req.ip || '');
+        if (!isValidToken) return res.status(400).json({ error: 'Validación anti-bot fallida.' });
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedFunc = String(funcNumber).replace(/\s+/g, '').toUpperCase();
@@ -161,12 +167,14 @@ export const login = async (req: Request, res: Response) => {
     const isEmailSearch = searchRaw.includes('@');
     const search = isEmailSearch ? searchRaw.toLowerCase() : searchRaw.replace(/\s+/g, '').toUpperCase();
     
-    if (!turnstileToken) {
+    if (TURNSTILE_SECRET_KEY && !turnstileToken) {
        return res.status(400).json({ error: 'Validación antibot requerida' });
     }
     
-    const isValidToken = await verifyTurnstileToken(turnstileToken, req.ip || '');
-    if (!isValidToken) return res.status(400).json({ error: 'Validación anti-bot fallida.' });
+    if (TURNSTILE_SECRET_KEY || turnstileToken) {
+        const isValidToken = await verifyTurnstileToken(turnstileToken, req.ip || '');
+        if (!isValidToken) return res.status(400).json({ error: 'Validación anti-bot fallida.' });
+    }
 
     try {
         logger.info(`[${new Date().toISOString()}] Login attempt: search=${search}`);

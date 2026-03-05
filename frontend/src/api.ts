@@ -31,6 +31,14 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth-storage');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+      throw new Error('Sesión expirada o token inválido');
+    }
     throw new Error((data && data.error) || res.statusText || `Error ${res.status}`);
   }
 
