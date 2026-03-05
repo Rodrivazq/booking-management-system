@@ -1,0 +1,15 @@
+﻿
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/rodri/Desktop/Aplicacion de reservas/backend[39m
+
+[90mstdout[2m | tests/reservation.test.ts
+[22m[39m[dotenv@17.3.1] injecting env (0) from .env -- tip: ­ƒñû agentic secret storage: https://dotenvx.com/as2
+
+ [31mÔØ»[39m tests/reservation.test.ts [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 13[2mms[22m[39m
+[31m     [31m├ù[31m should create a reservation successfully[39m[32m 9[2mms[22m[39m
+[31m     [31m├ù[31m should fail if deadline has passed[39m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[90m (2)[39m
+[2m   Start at [22m 21:05:40
+[2m   Duration [22m 343ms[2m (transform 87ms, setup 59ms, import 120ms, tests 13ms, environment 0ms)[22m
+

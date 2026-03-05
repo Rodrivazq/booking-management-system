@@ -16,6 +16,7 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('no-reply@reservas.local'),
   RESEND_API_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -40,4 +41,5 @@ export const SMTP = {
     from: env.SMTP_FROM,
 };
 export const RESEND_API_KEY = env.RESEND_API_KEY;
+export const TURNSTILE_SECRET_KEY = env.TURNSTILE_SECRET_KEY;
 export const DATA_DIR = path.join(__dirname, '../../data');

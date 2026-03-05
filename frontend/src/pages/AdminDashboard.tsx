@@ -25,6 +25,12 @@ export default function AdminDashboard() {
     }
     const [reservations, setReservations] = useState<Reservation[]>([])
     const [users, setUsers] = useState<User[]>([])
+    
+    // Pagination states
+    const [page, setPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalItems, setTotalItems] = useState(0)
+    const limit = 20
     const [menuData, setMenuData] = useState<{ current: Menu, next: Menu } | null>(null)
     const [menuType, setMenuType] = useState<'current' | 'next'>('next')
     const [qr, setQr] = useState('')
@@ -69,9 +75,18 @@ export default function AdminDashboard() {
         }
     }
 
+    // Reset page to 1 when changing tabs or searching
     useEffect(() => {
-        loadData()
-    }, [])
+        setPage(1)
+    }, [activeTab, searchTerm, selectedWeek])
+
+    useEffect(() => {
+        // Debounce search slightly to avoid spamming requests
+        const timeoutId = setTimeout(() => {
+            loadData()
+        }, 300)
+        return () => clearTimeout(timeoutId)
+    }, [activeTab, page, searchTerm, selectedWeek])
 
     // Fetch stats when selectedWeek changes
     useEffect(() => {
@@ -82,9 +97,28 @@ export default function AdminDashboard() {
 
     const loadData = async () => {
         try {
-            const r = await apiFetch<{ reservations: Reservation[], users: User[] }>('/api/reservations/admin')
-            setReservations(r.reservations)
-            setUsers(r.users)
+            // Include pagination parameters if viewing reservations or users
+            let query = `?page=${page}&limit=${limit}`
+            if (activeTab === 'users') {
+                 query += `&type=users`
+            }
+            if (searchTerm) {
+                 query += `&search=${encodeURIComponent(searchTerm)}`
+            }
+
+            // Notice we always hit reservations/admin to get either Reservations OR Users depending on type
+            // Based on our backend changes, this works for both tables now.
+            const r = await apiFetch<{ reservations?: Reservation[], users?: User[], totalPages: number, total: number }>(`/api/reservations/admin${query}`)
+            
+            if (activeTab === 'users' && r.users) {
+                setUsers(r.users)
+                setTotalPages(r.totalPages || 1)
+                setTotalItems(r.total || 0)
+            } else if (r.reservations) {
+                setReservations(r.reservations)
+                setTotalPages(r.totalPages || 1)
+                setTotalItems(r.total || 0)
+            }
 
             const m = await apiFetch<{ menu: { current: Menu, next: Menu } }>('/api/menu')
             setMenuData(m.menu)
@@ -308,6 +342,31 @@ export default function AdminDashboard() {
                             })}
                             {reservations.filter(r => r.week === selectedWeek).length === 0 && <p className="muted">No hay reservas para esta semana.</p>}
                         </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex-between" style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                                <div className="muted" style={{ fontSize: '0.9rem' }}>
+                                    Mostrando página {page} de {totalPages} ({totalItems} reservas en total)
+                                </div>
+                                <div className="btn-group">
+                                    <button 
+                                        className="btn btn-sm btn-secondary" 
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        disabled={page === 1}
+                                    >
+                                        Anterior
+                                    </button>
+                                    <button 
+                                        className="btn btn-sm btn-secondary" 
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={page === totalPages}
+                                    >
+                                        Siguiente
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="card card-error">
@@ -517,6 +576,31 @@ export default function AdminDashboard() {
                                     <UserRow key={u.id} user={u} onUpdate={handleUpdateUser} onPhotoClick={setSelectedUserForModal} />
                                 ))}
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="flex-between" style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                                    <div className="muted" style={{ fontSize: '0.9rem' }}>
+                                        Mostrando página {page} de {totalPages} ({totalItems} usuarios en total)
+                                    </div>
+                                    <div className="btn-group">
+                                        <button 
+                                            className="btn btn-sm btn-secondary" 
+                                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                                            disabled={page === 1}
+                                        >
+                                            Anterior
+                                        </button>
+                                        <button 
+                                            className="btn btn-sm btn-secondary" 
+                                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={page === totalPages}
+                                        >
+                                            Siguiente
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="card">

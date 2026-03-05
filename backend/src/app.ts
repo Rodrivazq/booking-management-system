@@ -12,8 +12,22 @@ import settingsRoutes from './routes/settings.routes';
 import statsRoutes from './routes/stats.routes';
 
 import { startReminderJob } from './jobs/reminder.job';
+import helmet from 'helmet';
+import { globalLimiter } from './middleware/rateLimiter';
+import { errorHandler } from './middleware/errorHandler';
+
+import morgan from 'morgan';
+import logger, { stream } from './utils/logger';
 
 const app = express();
+
+// -----------------------------
+// LOGGING Y SEGURIDAD BÁSICA
+// -----------------------------
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms', { stream }));
+
+app.use(helmet());
+app.use('/api/', globalLimiter);
 
 startReminderJob();
 
@@ -95,7 +109,13 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.get('/', (_req, res) => {
+  logger.info("Health check ping recibido en /");
   res.send('Backend API Running');
 });
+
+// -----------------------------
+// MANEJO DE ERRORES GLOBAL
+// -----------------------------
+app.use(errorHandler);
 
 export default app;

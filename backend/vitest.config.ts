@@ -4,10 +4,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    setupFiles: ['./tests/setup.ts'],
+    setupFiles: ['./tests/prisma.mock.ts'],
     fileParallelism: false,
     env: {
-      DATABASE_URL: 'file:./test.db',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/real_sabor_test?schema=public',
       JWT_SECRET: 'test-secret',
     },
   },

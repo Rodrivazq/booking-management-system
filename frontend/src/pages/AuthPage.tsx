@@ -6,6 +6,7 @@ import apiFetch from '../api'
 import ThemeToggle from '../components/ThemeToggle'
 import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarUploader'
 import { useToast } from '../context/ToastContext'
+import { Turnstile } from '@marsidev/react-turnstile'
 
 import { useSettings } from '../context/SettingsContext'
 
@@ -26,6 +27,7 @@ export default function AuthPage() {
         confirmPassword: '',
         photoUrl: ''
     })
+    const [turnstileToken, setTurnstileToken] = useState<string>('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const setUser = useAuthStore((s) => s.setUser)
@@ -60,12 +62,16 @@ export default function AuthPage() {
             if (!isLogin && !formData.photoUrl) {
                 throw new Error('Debes subir una foto de perfil obligatoriamente para registrarte')
             }
+            
+            if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken) {
+                 throw new Error('Por favor, completa la verificación anti-bot de Cloudflare')
+            }
 
             if (isLogin) {
                 // LOGIN FLOW
                 const res = await apiFetch<{ token: string, user: any }>('/api/auth/login', {
                     method: 'POST',
-                    body: JSON.stringify({ identifier: formData.identifier, password: formData.password, keepSession })
+                    body: JSON.stringify({ identifier: formData.identifier, password: formData.password, keepSession, turnstileToken })
                 })
 
                 localStorage.setItem('token', res.token)
@@ -93,7 +99,8 @@ export default function AuthPage() {
                         funcNumber: formData.funcNumber,
                         documentId: formData.documentId,
                         phoneNumber: formData.phoneNumber,
-                        photoUrl: formData.photoUrl
+                        photoUrl: formData.photoUrl,
+                        turnstileToken
                     })
                 })
                 // Registration succeeded — show success prompt to verify email
@@ -369,7 +376,18 @@ export default function AuthPage() {
                         </div>
                     )}
 
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '1rem' }} disabled={loading}>
+                    {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                             <Turnstile 
+                                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY} 
+                                onSuccess={(t) => setTurnstileToken(t)} 
+                                onError={() => setError('Error al cargar la validación anti-bot.')}
+                                onExpire={() => setTurnstileToken('')}
+                             />
+                         </div>
+                    )}
+
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '1rem' }} disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}>
                         {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesion' : 'Crear Cuenta')}
                     </button>
                 </form>

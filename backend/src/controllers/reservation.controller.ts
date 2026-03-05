@@ -129,19 +129,76 @@ export const getMyReservations = async (req: Request, res: Response) => {
 
 export const getAllReservations = async (req: Request, res: Response) => {
     try {
-        const reservations = await prisma.reservation.findMany({
-            include: { user: true } // Include user details if needed, but we map manually below to match existing format
-        });
-        
-        const users = await prisma.user.findMany({
-            include: {
-                reservations: {
+        const { page = '1', limit = '10', type = 'reservations', search = '' } = req.query;
+        const pageNumber = parseInt(page as string, 10);
+        const limitNumber = parseInt(limit as string, 10);
+        const skipNumber = (pageNumber - 1) * limitNumber;
+
+        // Búsqueda genérica para nombre, email, dpto o reserva
+        const searchFilter = search ? {
+            OR: [
+                { name: { contains: search as string, mode: 'insensitive' as const } },
+                { email: { contains: search as string, mode: 'insensitive' as const } },
+                { funcNumber: { contains: search as string, mode: 'insensitive' as const } }
+            ]
+        } : {};
+
+        if (type === 'users') {
+            const [users, total] = await Promise.all([
+                prisma.user.findMany({
+                    where: searchFilter,
+                    skip: skipNumber,
+                    take: limitNumber,
                     orderBy: { createdAt: 'desc' },
-                    take: 1,
-                    select: { weekStart: true }
-                }
-            }
-        });
+                    include: {
+                        reservations: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 1,
+                            select: { weekStart: true }
+                        }
+                    }
+                }),
+                prisma.user.count({ where: searchFilter })
+            ]);
+
+            const formattedUsers = users.map(u => ({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                funcNumber: u.funcNumber,
+                documentId: u.documentId,
+                phoneNumber: u.phoneNumber,
+                role: u.role,
+                photoUrl: u.photoUrl,
+                lastReservation: u.reservations[0]?.weekStart || null
+            }));
+
+            return res.json({ 
+                users: formattedUsers,
+                total,
+                page: pageNumber,
+                totalPages: Math.ceil(total / limitNumber)
+            });
+        } 
+        
+        // Default to reservations
+        let reservationFilter: any = {};
+        if (search) {
+             reservationFilter = {
+                 user: searchFilter
+             };
+        }
+
+        const [reservations, total] = await Promise.all([
+            prisma.reservation.findMany({
+                where: reservationFilter,
+                skip: skipNumber,
+                take: limitNumber,
+                orderBy: { createdAt: 'desc' },
+                include: { user: true }
+            }),
+            prisma.reservation.count({ where: reservationFilter })
+        ]);
 
         const formattedReservations = reservations.map(r => ({
             ...r,
@@ -152,24 +209,14 @@ export const getAllReservations = async (req: Request, res: Response) => {
             funcNumber: r.user ? r.user.funcNumber : ''
         }));
 
-        const formattedUsers = users.map(u => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            funcNumber: u.funcNumber,
-            documentId: u.documentId,
-            phoneNumber: u.phoneNumber,
-            role: u.role,
-            photoUrl: u.photoUrl,
-            lastReservation: u.reservations[0]?.weekStart || null
-        }));
-
         res.json({
             reservations: formattedReservations,
-            users: formattedUsers
+            total,
+            page: pageNumber,
+            totalPages: Math.ceil(total / limitNumber)
         });
     } catch (error) {
         console.error('Get all reservations error:', error);
-        res.status(500).json({ error: 'Error al obtener todas las reservas' });
+        res.status(500).json({ error: 'Error al obtener datos paginados' });
     }
 };

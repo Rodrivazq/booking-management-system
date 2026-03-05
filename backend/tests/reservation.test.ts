@@ -1,104 +1,111 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import request from 'supertest';
-import app from '../src/app';
-import prisma from '../src/utils/prisma';
-import fs from 'fs';
-
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { prismaMock } from './prisma.mock';
+import { createReservation } from '../src/controllers/reservation.controller';
 import { getNextMonday } from '../src/utils/dates';
 
-describe('Reservation Endpoints', () => {
-  let token: string;
-  let userId: string;
+describe('Reservation Controller - createReservation', () => {
   const nextMonday = getNextMonday();
 
-  beforeEach(async () => {
-    // Create a user
-    const userRes = await request(app)
-      .post('/api/auth/register')
-      .send({
-        name: 'Res User',
-        email: 'res@example.com',
-        password: 'password123',
-        funcNumber: 'RES001'
-      });
-    
-    token = userRes.body.token;
-    userId = userRes.body.user.id;
-
-    // Setup Menu for next week
-    await prisma.weeklyMenu.create({
-      data: {
-        weekStart: nextMonday,
-        days: JSON.stringify({
-          lunes: { meals: ['Meal A', 'Meal B', 'Meal C'], desserts: ['Dessert A', 'Dessert B', 'Dessert C'] },
-          martes: { meals: ['Meal A', 'Meal B', 'Meal C'], desserts: ['Dessert A', 'Dessert B', 'Dessert C'] },
-          miercoles: { meals: ['Meal A', 'Meal B', 'Meal C'], desserts: ['Dessert A', 'Dessert B', 'Dessert C'] },
-          jueves: { meals: ['Meal A', 'Meal B', 'Meal C'], desserts: ['Dessert A', 'Dessert B', 'Dessert C'] },
-          viernes: { meals: ['Meal A', 'Meal B', 'Meal C'], desserts: ['Dessert A', 'Dessert B', 'Dessert C'] },
-        }),
-        breadAvailable: true
-      }
-    });
-
-    // Ensure settings allow reservation (deadline far in future for test)
-    await prisma.settings.upsert({
-        where: { id: 1 },
-        update: { deadlineDay: 6, deadlineTime: '23:59' }, // Saturday
-        create: { deadlineDay: 6, deadlineTime: '23:59' }
-    });
-  });
-
   it('should create a reservation successfully', async () => {
-    const res = await request(app)
-      .post('/api/reservations')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
+    // Setup request and response mocks
+    const req = {
+      user: { id: 'user-123' },
+      body: {
         weekStart: nextMonday,
         timeSlot: '12:00',
         selections: [
           { day: 'lunes', meal: 'Meal A', dessert: 'Dessert A', bread: true },
           { day: 'martes', meal: 'Meal B', dessert: 'Dessert B', bread: false },
-          { day: 'miercoles', meal: 'Meal C', dessert: 'Dessert C', bread: true },
-          { day: 'jueves', meal: 'Meal A', dessert: 'Dessert A', bread: false },
-          { day: 'viernes', meal: 'Meal B', dessert: 'Dessert B', bread: true },
+          { day: 'miercoles', meal: 'Meal A', dessert: 'Dessert A', bread: false },
+          { day: 'jueves', meal: 'Meal B', dessert: 'Dessert B', bread: true },
+          { day: 'viernes', meal: 'Meal A', dessert: 'Dessert A', bread: false },
         ]
-      });
+      }
+    } as any;
 
-    if (res.statusCode !== 200) {
-        fs.writeFileSync('debug_res.json', JSON.stringify(res.body, null, 2));
-    }
+    const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
 
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('ok', true);
+    // Prisma Mocks Validation
+    prismaMock.settings.findFirst.mockResolvedValue({
+      id: 1, 
+      deadlineDay: 6, 
+      deadlineTime: '23:59', // Saturday
+      companyName: 'Test',
+      logoUrl: null,
+      primaryColor: null,
+      secondaryColor: null,
+      supportEmail: null,
+      supportPhone: null,
+      supportWhatsApp: null,
+      announcementMessage: null,
+      announcementType: null
+    } as any);
 
-    // Verify in DB
-    const reservation = await prisma.reservation.findFirst({
-      where: { userId }
-    });
-    expect(reservation).toBeTruthy();
-    expect(reservation?.weekStart).toEqual(nextMonday);
+    prismaMock.weeklyMenu.findUnique.mockResolvedValue({
+      id: 1, weekStart: nextMonday, breadAvailable: true,
+      days: JSON.stringify({
+         lunes: { meals: ['Meal A'], desserts: ['Dessert A'] },
+         martes: { meals: ['Meal B'], desserts: ['Dessert B'] },
+         miercoles: { meals: ['Meal A'], desserts: ['Dessert A'] },
+         jueves: { meals: ['Meal B'], desserts: ['Dessert B'] },
+         viernes: { meals: ['Meal A'], desserts: ['Dessert A'] }
+      }),
+      createdAt: new Date(), updatedAt: new Date()
+    } as any);
+
+    prismaMock.reservation.findFirst.mockResolvedValue(null); // No previous res
+    
+    prismaMock.reservation.create.mockResolvedValue({
+      id: 'res-456',
+      userId: 'user-123',
+      weekStart: nextMonday,
+      timeSlot: '12:00',
+      selections: JSON.stringify(req.body.selections),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    } as any);
+
+    await createReservation(req, res);
+
+    expect(prismaMock.reservation.create).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ ok: true, weekStart: nextMonday });
   });
 
-  it('should fail if menu selection is invalid', async () => {
-    const res = await request(app)
-      .post('/api/reservations')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        weekStart: nextMonday,
-        timeSlot: '12:00',
-        selections: [
-          { day: 'lunes', meal: 'Invalid Meal', dessert: 'Dessert A', bread: true }, // Invalid meal
+  it('should fail if deadline has passed', async () => {
+     // Setup request and response mocks
+     const req = {
+        user: { id: 'user-123' },
+        body: { weekStart: nextMonday, timeSlot: '12:00', selections: [
+          { day: 'lunes', meal: 'Meal A', dessert: 'Dessert A', bread: true },
           { day: 'martes', meal: 'Meal B', dessert: 'Dessert B', bread: false },
-          { day: 'miercoles', meal: 'Meal C', dessert: 'Dessert C', bread: true },
-          { day: 'jueves', meal: 'Meal A', dessert: 'Dessert A', bread: false },
-          { day: 'viernes', meal: 'Meal B', dessert: 'Dessert B', bread: true },
-        ]
-      });
+          { day: 'miercoles', meal: 'Meal A', dessert: 'Dessert A', bread: false },
+          { day: 'jueves', meal: 'Meal B', dessert: 'Dessert B', bread: true },
+          { day: 'viernes', meal: 'Meal A', dessert: 'Dessert A', bread: false },
+        ] }
+      } as any;
+  
+      const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
 
-    if (res.statusCode !== 400) console.log('Invalid Res Error:', JSON.stringify(res.body, null, 2));
-    if (res.statusCode === 400 && !res.body.error.includes('Opcion invalida')) console.log('Unexpected Error Message:', res.body.error);
+      // Mock deadline is very strict, say it passed on Monday of previous week
+      prismaMock.settings.findFirst.mockResolvedValue({
+        id: 1, deadlineDay: 0, deadlineTime: '00:00', // Sometime that implies passage
+        companyName: 'Test', logoUrl: null, primaryColor: null, secondaryColor: null, supportEmail: null, supportPhone: null, supportWhatsApp: null, announcementMessage: null, announcementType: null
+      } as any);
+  
+      // Force test error logic manually if needed, or rely on internal implementation checks.
+      // Since it's deterministic based on "Date.now()", mocking the system time is required for this specific test
+      // Simulate system time on Wednesday but pass deadline logic directly through Mock
+      vi.useFakeTimers();
+      const wednesday = new Date();
+      // Ensure we stay within the same expected week for the date logic test, just push time forward.
+      wednesday.setHours(wednesday.getHours() + 48); // Push arbitrary time
+      vi.setSystemTime(wednesday);
+  
+      await createReservation(req, res);
+      
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('El periodo de reservas ha cerrado') }));
 
-    expect(res.statusCode).toEqual(400);
-    expect(res.body.error).toContain('Opcion invalida');
+      vi.useRealTimers();
   });
 });

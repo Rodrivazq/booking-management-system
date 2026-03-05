@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import prisma from '../utils/prisma';
+import logger from '../utils/logger';
+import { verifyTurnstileToken } from '../utils/turnstile';
 import { JWT_SECRET, FRONTEND_URL, SMTP, RESEND_API_KEY } from '../config/env';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
@@ -32,8 +34,13 @@ const getNextMonday = () => {
 };
 
 export const register = async (req: Request, res: Response) => {
-    const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl } = req.body || {};
-    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl) return res.status(400).json({ error: 'Nombre, correo, contrasena, numero de funcionario, documento y foto de perfil son obligatorios' });
+    const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl, turnstileToken } = req.body || {};
+    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl || !turnstileToken) {
+        return res.status(400).json({ error: 'Todos los campos obligatorios incluyendo verificación antibot son requeridos' });
+    }
+
+    const isValidToken = await verifyTurnstileToken(turnstileToken, req.ip || '');
+    if (!isValidToken) return res.status(400).json({ error: 'Validación anti-bot fallida.' });
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedFunc = String(funcNumber).replace(/\s+/g, '').toUpperCase();
@@ -149,15 +156,20 @@ export const verifyEmail = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-    const { email, password, identifier, keepSession } = req.body || {};
+    const { email, password, identifier, keepSession, turnstileToken } = req.body || {};
     const searchRaw = String(identifier || email || '').trim();
     const isEmailSearch = searchRaw.includes('@');
     const search = isEmailSearch ? searchRaw.toLowerCase() : searchRaw.replace(/\s+/g, '').toUpperCase();
     
-
+    if (!turnstileToken) {
+       return res.status(400).json({ error: 'Validación antibot requerida' });
+    }
+    
+    const isValidToken = await verifyTurnstileToken(turnstileToken, req.ip || '');
+    if (!isValidToken) return res.status(400).json({ error: 'Validación anti-bot fallida.' });
 
     try {
-        console.log(`[${new Date().toISOString()}] Login attempt: search=${search}`);
+        logger.info(`[${new Date().toISOString()}] Login attempt: search=${search}`);
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
