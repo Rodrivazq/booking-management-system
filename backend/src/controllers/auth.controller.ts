@@ -184,7 +184,7 @@ export const login = async (req: Request, res: Response) => {
         const ok = bcrypt.compareSync(password || '', user.passwordHash);
         if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
 
-        if (!user.isEmailVerified && user.role !== 'superadmin') {
+        if (!user.isEmailVerified && user.role === 'user') {
             return res.status(403).json({ error: 'Debes verificar tu correo electronico antes de iniciar sesion. Revisa tu bandeja de entrada o la carpeta de SPAM.' });
         }
 

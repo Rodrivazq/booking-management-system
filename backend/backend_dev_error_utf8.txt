@@ -1,0 +1,95 @@
+﻿
+> reservas-menus@1.0.0 dev
+> ts-node src/index.ts
+
+node.exe : C:\Users\rod
+ri\Desktop\Aplicacion 
+de reservas\backend\nod
+e_modules\ts-node\src\i
+ndex.ts:859
+En C:\Users\rodri\AppDa
+ta\Roaming\npm\npm.ps1:
+ 24 Carácter: 5
++     & "node$exe"  "$b
+asedir/node_modules/npm
+/bin/npm-cli.js" $args
++     ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (C:\Users\rodr   
+ i\...rc\index.ts:8    
+59:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+    return new TSError(
+diagnosticText, 
+diagnosticCodes, 
+diagnostics);
+           ^
+TSError: Ô¿» Unable to 
+compile TypeScript:
+src/utils/turnstile.ts(
+28,13): error TS18046: 
+'outcome' is of type 
+'unknown'.
+src/utils/turnstile.ts(
+32,68): error TS18046: 
+'outcome' is of type 
+'unknown'.
+
+    at createTSError (C
+:\Users\rodri\Desktop\A
+plicacion de reservas\b
+ackend\node_modules\ts-
+node\src\index.ts:859:1
+2)
+    at reportTSError (C
+:\Users\rodri\Desktop\A
+plicacion de reservas\b
+ackend\node_modules\ts-
+node\src\index.ts:863:1
+9)
+    at getOutput (C:\Us
+ers\rodri\Desktop\Aplic
+acion de reservas\backe
+nd\node_modules\ts-node
+\src\index.ts:1077:36)
+    at Object.compile (
+C:\Users\rodri\Desktop\
+Aplicacion de reservas\
+backend\node_modules\ts
+-node\src\index.ts:1433
+:41)
+    at 
+Module.m._compile (C:\U
+sers\rodri\Desktop\Apli
+cacion de reservas\back
+end\node_modules\ts-nod
+e\src\index.ts:1617:30)
+    at node:internal/mo
+dules/cjs/loader:1893:1
+0
+    at Object.require.e
+xtensions.<computed> 
+[as .ts] (C:\Users\rodr
+i\Desktop\Aplicacion 
+de reservas\backend\nod
+e_modules\ts-node\src\i
+ndex.ts:1621:12)
+    at Module.load (nod
+e:internal/modules/cjs/
+loader:1481:32)
+    at Module._load (no
+de:internal/modules/cjs
+/loader:1300:12)
+    at TracingChannel.t
+raceSync (node:diagnost
+ics_channel:328:14) {
+  diagnosticCodes: [ 
+18046, 18046 ]
+}

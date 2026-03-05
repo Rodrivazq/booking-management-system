@@ -128,9 +128,7 @@ export default function AdminDashboard() {
 
             const w = await apiFetch<{ weeks: string[] }>('/api/stats/weeks')
             setWeeks(w.weeks)
-            if (w.weeks.length > 0) {
-                setSelectedWeek(w.weeks[0])
-            }
+            setSelectedWeek(prev => prev || (w.weeks.length > 0 ? w.weeks[0] : ''))
         } catch (e) {
             console.error(e)
         }

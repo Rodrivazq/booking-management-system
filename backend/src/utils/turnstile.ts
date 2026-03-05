@@ -23,7 +23,7 @@ export const verifyTurnstileToken = async (token: string, ip: string): Promise<b
             method: 'POST',
         });
 
-        const outcome = await result.json();
+        const outcome = await result.json() as any;
         
         if (outcome.success) {
             return true;
