@@ -29,6 +29,7 @@ export default function HelpButton({ customTrigger }: HelpButtonProps) {
                     className="btn btn-secondary btn-sm"
                     onClick={() => setIsOpen(true)}
                     title="Ayuda y Documentacion"
+                    aria-label="Ayuda y Documentacion"
                     style={{
                         width: '2.5rem',
                         height: '2.5rem',
@@ -84,6 +85,8 @@ export default function HelpButton({ customTrigger }: HelpButtonProps) {
                     }}>
                         <button
                             onClick={() => setIsOpen(false)}
+                            aria-label="Cerrar ayuda"
+                            title="Cerrar ayuda"
                             style={{
                                 position: 'absolute',
                                 top: '1rem',

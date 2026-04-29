@@ -16,7 +16,8 @@ export default function ThemeToggle() {
                 justifyContent: 'center',
                 borderRadius: '50%'
             }}
-            aria-label="Toggle Theme"
+            aria-label="Cambiar tema"
+            title="Cambiar tema"
         >
             {theme === 'light' ? '🌙' : '☀️'}
         </button>

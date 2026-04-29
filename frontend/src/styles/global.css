@@ -6,6 +6,14 @@
   padding: 0;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg);
@@ -16,11 +24,9 @@ body {
 }
 
 #root {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
-
 /* Layout Utilities */
 .page {
   max-width: 1200px;
@@ -670,15 +676,13 @@ p {
   }
 }
 
-/* Auth Page Redesign */
-/* Auth Page Redesign */
 .auth-container {
   display: grid;
   grid-template-columns: 1fr;
+  width: 100vw;
+  min-height: 100vh;
   height: 100vh;
-  /* Fixed height instead of min-height */
   overflow: hidden;
-  /* Prevent scrolling */
   background-color: var(--bg);
 }
 

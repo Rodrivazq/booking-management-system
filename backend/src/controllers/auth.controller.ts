@@ -8,6 +8,7 @@ import prisma from '../utils/prisma';
 import logger from '../utils/logger';
 import { verifyTurnstileToken } from '../utils/turnstile';
 import { JWT_SECRET, FRONTEND_URL, SMTP, RESEND_API_KEY, TURNSTILE_SECRET_KEY } from '../config/env';
+import { getNextMonday } from '../utils/dates';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
@@ -23,15 +24,7 @@ function createTransport() {
 
 const mailer = createTransport();
 
-const getNextMonday = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (8 - day) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + diff);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday.toISOString().slice(0, 10);
-};
+
 
 export const register = async (req: Request, res: Response) => {
     const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl, turnstileToken } = req.body || {};
@@ -119,6 +112,30 @@ export const register = async (req: Request, res: Response) => {
             } catch (error) {
                 console.error("Resend error (Verification):", error);
             }
+        } else if (mailer) {
+            mailer.sendMail({
+                to: user.email,
+                from: SMTP.from,
+                subject: 'Confirma tu correo electrónico',
+                text: `Hola ${user.name}. Ingresa a ${verifyUrl} para verificar tu cuenta.`,
+                html: `
+                <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 20px; text-align: center;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px; font-weight: bold;">App de Reservas</h2>
+                        <h3 style="color: #374151; font-size: 20px; margin-bottom: 20px;">Verificación de Cuenta</h3>
+                        <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                            Hola <strong>${user.name}</strong> 👋.<br><br>Gracias por registrarte. Para poder ingresar a tu cuenta y empezar a reservar, necesitamos que confirmes tu dirección de correo electrónico haciendo clic en el siguiente botón:
+                        </p>
+                        <a href="${verifyUrl}" style="display: inline-block; background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                            Verificar mi Correo
+                        </a>
+                        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                            Si no creaste esta cuenta, simplemente ignora este correo.
+                        </p>
+                    </div>
+                </div>
+                `
+            }).catch((err) => console.error('No se pudo enviar email de verificacion', err));
         } else {
             console.log('Verification link:', verifyUrl);
         }

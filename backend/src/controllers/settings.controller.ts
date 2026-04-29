@@ -6,6 +6,8 @@ const DEFAULT_SETTINGS = {
     logoUrl: '',
     primaryColor: '#16a34a',
     secondaryColor: '#1e293b',
+    deadlineDay: 4,       // Thursday by default
+    deadlineTime: '23:59',
 };
 
 export const getSettings = async (req: Request, res: Response) => {
