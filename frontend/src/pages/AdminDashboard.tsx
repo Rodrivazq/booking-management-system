@@ -10,6 +10,7 @@ import { useToast } from '../context/ToastContext'
 import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarUploader'
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+type UserRole = User['role']
 
 export default function AdminDashboard() {
     const navigate = useNavigate()
@@ -196,6 +197,35 @@ export default function AdminDashboard() {
         }
     }
 
+    const handleRoleChange = async (userId: string, newRole: UserRole, userName: string, currentRole: UserRole) => {
+        // Build a clear confirmation message depending on direction of change
+        const promotingToAdmin = newRole === 'admin' && currentRole === 'user'
+        const promotingToSuperAdmin = newRole === 'superadmin'
+        const demoting = (currentRole === 'admin' || currentRole === 'superadmin') && newRole === 'user'
+
+        let confirmMsg = `¿Cambiar el rol de "${userName}" de ${currentRole.toUpperCase()} a ${newRole.toUpperCase()}?`
+        if (promotingToSuperAdmin) {
+            confirmMsg = `⚠️ Estás por otorgar privilegios de SUPER ADMIN a "${userName}". Este rol tiene acceso total al sistema. ¿Confirmás?`
+        } else if (promotingToAdmin) {
+            confirmMsg = `Estás por promover a "${userName}" a ADMINISTRADOR. Tendrá acceso al panel de administración. ¿Confirmás?`
+        } else if (demoting) {
+            confirmMsg = `Estás por degradar a "${userName}" de ${currentRole.toUpperCase()} a USUARIO. Perderá acceso admin. ¿Confirmás?`
+        }
+
+        if (!window.confirm(confirmMsg)) return
+
+        try {
+            await apiFetch(`/api/admin/users/${userId}/role`, {
+                method: 'PUT',
+                body: JSON.stringify({ role: newRole })
+            })
+            success(`Rol de ${userName} actualizado a ${newRole}`)
+            loadData()
+        } catch (e: any) {
+            error(e.message || 'Error al cambiar el rol')
+        }
+    }
+
     const getDailyTotals = (dayStats: any) => {
         const totals = { meals: {} as Record<string, number>, desserts: {} as Record<string, number>, bread: 0 }
         Object.values(dayStats).forEach((slot: any) => {
@@ -301,13 +331,7 @@ export default function AdminDashboard() {
                             />
                         </div>
                         <div className="list">
-                            {reservations.filter(r => {
-                                return r.week === selectedWeek && (
-                                    (r.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    (r.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    (r.funcNumber || '').includes(searchTerm)
-                                )
-                            }).map(r => {
+                            {reservations.map(r => {
                                 const user = users.find(u => u.id === r.userId)
                                 return (
                                     <div key={r.id} className="item flex-col" style={{ gap: '0.5rem' }}>
@@ -348,7 +372,7 @@ export default function AdminDashboard() {
                                     </div>
                                 )
                             })}
-                            {reservations.filter(r => r.week === selectedWeek).length === 0 && <p className="muted">No hay reservas para esta semana.</p>}
+                            {reservations.length === 0 && <p className="muted">No hay reservas para esta semana.</p>}
                         </div>
 
                         {/* Pagination Controls */}
@@ -578,7 +602,7 @@ export default function AdminDashboard() {
                                         u.email.toLowerCase().includes(term) ||
                                         (u.funcNumber && u.funcNumber.includes(term))
                                 }).map(u => (
-                                    <UserRow key={u.id} user={u} onUpdate={handleUpdateUser} onPhotoClick={setSelectedUserForModal} />
+                                    <UserRow key={u.id} user={u} onUpdate={handleUpdateUser} onPhotoClick={setSelectedUserForModal} currentUserRole={currentUser?.role} currentUserId={currentUser?.id} onRoleChange={handleRoleChange} />
                                 ))}
                             </div>
 
@@ -1020,7 +1044,21 @@ export default function AdminDashboard() {
     )
 }
 
-function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: string, data: { funcNumber?: string, email?: string, phoneNumber?: string, documentId?: string }) => void, onPhotoClick: (user: User) => void }) {
+function UserRow({
+    user,
+    onUpdate,
+    onPhotoClick,
+    currentUserRole,
+    currentUserId,
+    onRoleChange
+}: {
+    user: User
+    onUpdate: (id: string, data: { funcNumber?: string, email?: string, phoneNumber?: string, documentId?: string }) => void
+    onPhotoClick: (user: User) => void
+    currentUserRole?: string
+    currentUserId?: string
+    onRoleChange?: (userId: string, newRole: UserRole, userName: string, currentRole: UserRole) => Promise<void>
+}) {
     const [isEditing, setIsEditing] = useState(false)
     const [formData, setFormData] = useState({
         funcNumber: user.funcNumber || '',
@@ -1028,6 +1066,8 @@ function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: 
         email: user.email || '',
         phoneNumber: user.phoneNumber || ''
     })
+    const [roleChanging, setRoleChanging] = useState(false)
+    const [pendingRole, setPendingRole] = useState<UserRole>(user.role)
 
     useEffect(() => {
         setFormData({
@@ -1036,6 +1076,7 @@ function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: 
             email: user.email || '',
             phoneNumber: user.phoneNumber || ''
         })
+        setPendingRole(user.role)
     }, [user])
 
     const handleSave = () => {
@@ -1043,19 +1084,31 @@ function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: 
         setIsEditing(false)
     }
 
+    const handleRoleSelect = async (newRole: UserRole) => {
+        if (!onRoleChange || newRole === user.role) return
+        setRoleChanging(true)
+        try {
+            await onRoleChange(user.id, newRole, user.name, user.role)
+        } finally {
+            setRoleChanging(false)
+        }
+    }
+
+    const isSelf = currentUserId === user.id
+
     return (
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}>
             <div className="flex-between" style={{ alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     {user.photoUrl ? (
-                        <img 
-                            src={user.photoUrl} 
-                            alt={user.name} 
+                        <img
+                            src={user.photoUrl}
+                            alt={user.name}
                             style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)', cursor: 'pointer' }}
-                            onClick={() => onPhotoClick(user)} 
+                            onClick={() => onPhotoClick(user)}
                         />
                     ) : (
-                        <div 
+                        <div
                             style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', cursor: 'pointer' }}
                             onClick={() => onPhotoClick(user)}
                         >
@@ -1066,7 +1119,6 @@ function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: 
                         <strong>{user.name}</strong>
                         <div className="muted" style={{ fontSize: '0.9rem' }}>{user.email}</div>
                         {user.phoneNumber && <div className="muted" style={{ fontSize: '0.8rem' }}>Tel: {user.phoneNumber}</div>}
-                        
                         {user.lastReservation ? (
                             <div style={{ fontSize: '0.8rem', color: 'var(--warning)', marginTop: '0.25rem' }}>Última reserva: {user.lastReservation}</div>
                         ) : (
@@ -1081,6 +1133,42 @@ function UserRow({ user, onUpdate, onPhotoClick }: { user: User, onUpdate: (id: 
                     </span>
                 </div>
             </div>
+
+            {/* Role change — only visible to superadmin, not on own card, not on other superadmins */}
+            {currentUserRole === 'superadmin' && (
+                <div style={{ padding: '0.75rem', background: 'var(--bg)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                    <div className="flex-between" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                        <span className="muted" style={{ fontSize: '0.85rem', fontWeight: 500 }}>Rol:</span>
+                        {isSelf ? (
+                            <span className="badge badge-gray" style={{ fontSize: '0.8rem' }}>No puedes cambiar tu propio rol</span>
+                        ) : user.role === 'superadmin' ? (
+                            <span className="badge badge-error" style={{ fontSize: '0.8rem' }}>Super Admin protegido</span>
+                        ) : (
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <select
+                                    className="input"
+                                    style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', width: 'auto' }}
+                                    value={pendingRole}
+                                    disabled={roleChanging}
+                                    onChange={e => setPendingRole(e.target.value as UserRole)}
+                                >
+                                    <option value="user">Usuario</option>
+                                    <option value="admin">Administrador</option>
+                                    <option value="superadmin">Super Admin</option>
+                                </select>
+                                <button
+                                    className="btn btn-sm btn-primary"
+                                    disabled={roleChanging || pendingRole === user.role}
+                                    onClick={() => handleRoleSelect(pendingRole)}
+                                    style={{ minWidth: '80px' }}
+                                >
+                                    {roleChanging ? '...' : 'Aplicar'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div style={{ marginTop: 'auto' }}>
                 {!isEditing ? (

@@ -61,7 +61,7 @@ export const createUser = async (req: Request, res: Response) => {
     const { name, email, password, funcNumber, documentId, phoneNumber, role, photoUrl } = req.body || {};
     const creatorRole = req.user.role;
 
-    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl) return res.status(400).json({ error: 'Faltan datos obligatorios, incluyendo foto de perfil y documento' });
+    if (!name || !email || !password || !funcNumber || !documentId) return res.status(400).json({ error: 'Faltan datos obligatorios (nombre, email, contraseña, nro. funcionario, documento)' });
 
     // Role validation
     if (role === 'superadmin' && creatorRole !== 'superadmin') {
@@ -93,7 +93,9 @@ export const createUser = async (req: Request, res: Response) => {
                 funcNumber: normalizedFunc,
                 documentId: normalizedDoc,
                 phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
-                photoUrl
+                photoUrl: photoUrl || null,
+                // Admin-created users are pre-verified — they don't go through the email flow
+                isEmailVerified: true,
             }
         });
 
@@ -103,3 +105,39 @@ export const createUser = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error al crear usuario' });
     }
 };
+
+export const changeUserRole = async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { role } = req.body || {};
+    const validRoles = ['user', 'admin', 'superadmin'];
+
+    if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: 'Rol inválido. Valores permitidos: user, admin, superadmin' });
+    }
+
+    // Prevent self-role change (accidental lockout)
+    if (req.user.id === userId) {
+        return res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
+    }
+
+    try {
+        const target = await prisma.user.findUnique({ where: { id: userId } });
+        if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        // Only superadmin can touch another superadmin
+        if (target.role === 'superadmin') {
+            return res.status(403).json({ error: 'No se puede modificar el rol de un Super Admin' });
+        }
+
+        const updated = await prisma.user.update({
+            where: { id: userId },
+            data: { role }
+        });
+
+        res.json({ ok: true, user: { id: updated.id, name: updated.name, role: updated.role } });
+    } catch (error) {
+        console.error('Change role error:', error);
+        res.status(500).json({ error: 'Error al cambiar el rol del usuario' });
+    }
+};
+

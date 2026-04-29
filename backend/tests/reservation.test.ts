@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { createReservation } from '../src/controllers/reservation.controller';
+import { createReservation, getUsersWithoutReservation } from '../src/controllers/reservation.controller';
 import { getNextMonday } from '../src/utils/dates';
 
 // ---------------------------------------------------------------------------
@@ -209,5 +209,39 @@ describe('createReservation', () => {
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({ error: expect.stringContaining('selección para cada día') })
         );
+    });
+});
+
+describe('getUsersWithoutReservation', () => {
+    it('filters out already-reserved users and includes all roles without reservation', async () => {
+        const { req, res } = {
+            req: { query: { week: nextMonday } } as any,
+            res: { json: vi.fn(), status: vi.fn().mockReturnThis() } as any,
+        };
+
+        prismaMock.reservation.findMany.mockResolvedValue([
+            { userId: 'reserved-user' },
+        ] as any);
+        prismaMock.user.findMany.mockResolvedValue([
+            { id: 'regular-user', name: 'Usuario', email: 'user@test.com', funcNumber: '1', phoneNumber: null, photoUrl: null, role: 'user' },
+            { id: 'admin-user', name: 'Admin', email: 'admin@test.com', funcNumber: '2', phoneNumber: null, photoUrl: null, role: 'admin' },
+            { id: 'superadmin-user', name: 'Super Admin', email: 'super@test.com', funcNumber: '3', phoneNumber: null, photoUrl: null, role: 'superadmin' },
+        ] as any);
+
+        await getUsersWithoutReservation(req, res);
+
+        expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { id: { notIn: ['reserved-user'] } },
+            })
+        );
+        expect(res.json).toHaveBeenCalledWith({
+            users: expect.arrayContaining([
+                expect.objectContaining({ id: 'regular-user' }),
+                expect.objectContaining({ id: 'admin-user' }),
+                expect.objectContaining({ id: 'superadmin-user' }),
+            ]),
+            week: nextMonday,
+        });
     });
 });

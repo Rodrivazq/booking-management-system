@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-
 import { getNextMonday } from '../utils/dates';
 
 export const getAvailableWeeks = async (req: Request, res: Response) => {
@@ -9,7 +8,7 @@ export const getAvailableWeeks = async (req: Request, res: Response) => {
             select: { weekStart: true },
             distinct: ['weekStart']
         });
-        
+
         let weeks = reservations.map(r => r.weekStart).sort().reverse();
 
         // Ensure the upcoming week is always in the list
@@ -17,8 +16,7 @@ export const getAvailableWeeks = async (req: Request, res: Response) => {
         if (!weeks.includes(nextMonday)) {
             weeks.unshift(nextMonday);
         }
-        
-        // Remove duplicates again just in case
+
         weeks = [...new Set(weeks)];
 
         res.json({ weeks });
@@ -31,18 +29,14 @@ export const getAvailableWeeks = async (req: Request, res: Response) => {
 export const getStats = async (req: Request, res: Response) => {
     const { week } = req.query;
     const targetWeek = (week as string) || getNextMonday();
-    const fs = require('fs');
-    fs.appendFileSync('stats_debug.log', `\n[Stats] Request week: ${week}, Target: ${targetWeek}`);
 
     try {
         const reservations = await prisma.reservation.findMany({
             where: { weekStart: targetWeek },
             include: { user: true }
         });
-        fs.appendFileSync('stats_debug.log', `\n[Stats] Week: ${targetWeek}, Res Count: ${reservations.length}`);
 
-
-        // Structure: { [day]: { [timeSlot]: { meals: { [mealName]: count }, desserts: { [dessertName]: count }, bread: count } } }
+        // Structure: { [day]: { [timeSlot]: { meals: {}, desserts: {}, bread: 0, total: 0 } } }
         const stats: any = {};
 
         reservations.forEach(r => {
@@ -51,28 +45,26 @@ export const getStats = async (req: Request, res: Response) => {
             try {
                 selections = JSON.parse(r.selections as string);
             } catch (e) {
-                console.warn('Error parsing selections', r.id);
+                console.warn('Error parsing selections for reservation', r.id);
             }
 
             if (Array.isArray(selections)) {
                 selections.forEach(sel => {
                     const day = sel.day;
                     if (!stats[day]) stats[day] = {};
-                    if (!stats[day][timeSlot]) stats[day][timeSlot] = { meals: {}, desserts: {}, bread: 0 };
+                    if (!stats[day][timeSlot]) {
+                        stats[day][timeSlot] = { meals: {}, desserts: {}, bread: 0, total: 0 };
+                    }
 
                     const slotStats = stats[day][timeSlot];
+                    slotStats.total += 1;
 
-                    // Count meals
                     if (sel.meal) {
                         slotStats.meals[sel.meal] = (slotStats.meals[sel.meal] || 0) + 1;
                     }
-
-                    // Count desserts
                     if (sel.dessert) {
                         slotStats.desserts[sel.dessert] = (slotStats.desserts[sel.dessert] || 0) + 1;
                     }
-
-                    // Count bread
                     if (sel.bread) {
                         slotStats.bread += 1;
                     }
@@ -80,7 +72,7 @@ export const getStats = async (req: Request, res: Response) => {
             }
         });
 
-        res.json({ stats, week: targetWeek });
+        res.json({ stats, week: targetWeek, totalReservations: reservations.length });
     } catch (error) {
         console.error('Get stats error:', error);
         res.status(500).json({ error: 'Error al obtener estadísticas' });

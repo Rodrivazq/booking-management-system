@@ -4,11 +4,9 @@ import prisma from '../utils/prisma';
 import { getNextMonday } from '../utils/dates';
 
 export const getStats = async (req: Request, res: Response) => {
-    console.log('ReportsController: Request received', req.query);
     try {
         const { week } = req.query;
         const targetWeek = (week as string) || getNextMonday();
-        console.log('ReportsController: Target week:', targetWeek);
 
         // 1. Fetch Data
         const [reservations, users, weeklyMenu] = await Promise.all([
@@ -16,7 +14,7 @@ export const getStats = async (req: Request, res: Response) => {
                 where: { weekStart: targetWeek },
                 include: { user: true }
             }),
-            prisma.user.findMany(),
+            prisma.user.findMany({ select: { id: true } }),
             prisma.weeklyMenu.findUnique({
                 where: { weekStart: targetWeek }
             })
@@ -30,13 +28,9 @@ export const getStats = async (req: Request, res: Response) => {
         const dishCounts: any = {};
         const reservationsByDay: any = {};
         const breadStats = { withBread: 0, withoutBread: 0 };
-        const timeSlotStats: any = {
-            '11:45': 0,
-            '12:30': 0,
-            '13:15': 0,
-            'Noche': 0
-        };
         const detailedReservations: any[] = [];
+        // Dynamic timeslot counter — populated from actual reservation data
+        const timeSlotStats: Record<string, number> = {};
         
         const DAY_OFFSETS: any = { 'lunes': 0, 'martes': 1, 'miercoles': 2, 'jueves': 3, 'viernes': 4 };
 

@@ -274,7 +274,6 @@ export const getUsersWithoutReservation = async (req: Request, res: Response) =>
 
         const usersWithout = await prisma.user.findMany({
             where: {
-                role: { notIn: ['admin', 'superadmin'] },
                 id: { notIn: Array.from(reservedSet) }
             },
             select: {
