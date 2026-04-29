@@ -19,7 +19,7 @@ import LoadingScreen from './components/LoadingScreen'
 function PrivateRoute({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) {
   const user = useAuthStore(s => s.user)
   if (!user) return <Navigate to="/login" />
-  if (adminOnly && user.role === 'user') return <Navigate to="/" />
+  if (adminOnly && !['admin', 'superadmin'].includes(user.role)) return <Navigate to="/" />
   return <>{children}</>
 }
 

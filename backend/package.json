@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "npx prisma generate && tsc",
-    "start": "npx prisma db push --accept-data-loss && node dist/index.js",
+    "start": "npx prisma migrate deploy && node dist/index.js",
     "postinstall": "npx prisma generate",
     "test": "vitest run"
   },

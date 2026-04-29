@@ -25,7 +25,8 @@ export default function AdminDashboard() {
     }
     const [reservations, setReservations] = useState<Reservation[]>([])
     const [users, setUsers] = useState<User[]>([])
-    
+    const [usersWithoutReservation, setUsersWithoutReservation] = useState<User[]>([])
+
     // Pagination states
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
@@ -97,19 +98,20 @@ export default function AdminDashboard() {
 
     const loadData = async () => {
         try {
-            // Include pagination parameters if viewing reservations or users
+            // Build query params — always pass week for reservations so pagination is server-side correct
             let query = `?page=${page}&limit=${limit}`
             if (activeTab === 'users') {
-                 query += `&type=users`
+                query += `&type=users`
             }
             if (searchTerm) {
-                 query += `&search=${encodeURIComponent(searchTerm)}`
+                query += `&search=${encodeURIComponent(searchTerm)}`
+            }
+            if (selectedWeek && activeTab === 'reservations') {
+                query += `&week=${encodeURIComponent(selectedWeek)}`
             }
 
-            // Notice we always hit reservations/admin to get either Reservations OR Users depending on type
-            // Based on our backend changes, this works for both tables now.
             const r = await apiFetch<{ reservations?: Reservation[], users?: User[], totalPages: number, total: number }>(`/api/reservations/admin${query}`)
-            
+
             if (activeTab === 'users' && r.users) {
                 setUsers(r.users)
                 setTotalPages(r.totalPages || 1)
@@ -133,6 +135,14 @@ export default function AdminDashboard() {
             console.error(e)
         }
     }
+
+    // Fetch users without reservation from dedicated endpoint whenever selectedWeek changes
+    useEffect(() => {
+        if (!selectedWeek) return
+        apiFetch<{ users: User[] }>(`/api/reservations/admin/without-reservation?week=${encodeURIComponent(selectedWeek)}`)
+            .then(data => setUsersWithoutReservation(data.users))
+            .catch(e => console.error('Users without reservation error:', e))
+    }, [selectedWeek])
 
     const loadStats = async (week: string) => {
         setLoading(true)
@@ -371,10 +381,7 @@ export default function AdminDashboard() {
                         <h3>Funcionarios Sin Reserva ({selectedWeek})</h3>
                         <p className="muted" style={{ marginBottom: '1rem' }}>Lista de usuarios que aun no han reservado su menu para esta semana.</p>
                         <div className="grid-2">
-                            {users.filter(u => {
-                                const hasReservation = reservations.some(r => r.userId === u.id && r.week === selectedWeek)
-                                return !hasReservation && u.role !== 'admin'
-                            }).map(u => (
+                            {usersWithoutReservation.map(u => (
                                 <div key={u.id} className="card" style={{ border: '1px solid var(--border)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                     {u.photoUrl ? (
                                         <img

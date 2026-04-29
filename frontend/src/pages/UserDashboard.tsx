@@ -4,7 +4,6 @@ import apiFetch from '../api'
 import { Menu, Reservation } from '../types'
 import Skeleton from '../components/Skeleton'
 import { useToast } from '../context/ToastContext'
-import { useSettings } from '../context/SettingsContext'
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 const TIME_SLOTS = [
@@ -12,22 +11,36 @@ const TIME_SLOTS = [
     '21:00', '21:30', '22:00'
 ]
 
+// Shape returned by GET /api/reservations/window
+interface ReservationWindow {
+    currentMonday: string
+    nextMonday: string
+    deadlineDay: number
+    deadlineTime: string
+    isReservationOpen: boolean
+    activeWeek: string
+    reason: string
+}
+
 export default function UserDashboard() {
     const { success, error } = useToast()
     const [menus, setMenus] = useState<{ current: Menu, next: Menu } | null>(null)
     const [dates, setDates] = useState<{ current: string, next: string } | null>(null)
     const [viewMode, setViewMode] = useState<'current' | 'next'>('next')
     const [userReservations, setUserReservations] = useState<Reservation[]>([])
+    const [window_, setWindow_] = useState<ReservationWindow | null>(null)
 
     const [selections, setSelections] = useState<Record<string, { meal: string, dessert: string, bread: boolean }>>({})
     const [timeSlot, setTimeSlot] = useState('')
     const [loading, setLoading] = useState(false)
+    // Track last saved week so the confirmation card shows correctly
+    const [lastSavedWeek, setLastSavedWeek] = useState<string | null>(null)
 
     useEffect(() => {
         loadData()
     }, [])
 
-    // Update form when viewMode or reservations change
+    // Populate form when viewMode or reservations change
     useEffect(() => {
         if (!dates) return
         const targetDate = viewMode === 'current' ? dates.current : dates.next
@@ -43,28 +56,26 @@ export default function UserDashboard() {
             }
             setSelections(sel)
         } else {
-            // Reset form
             setSelections({})
             setTimeSlot('')
         }
+        setLastSavedWeek(null)
     }, [viewMode, userReservations, dates])
 
     const loadData = async () => {
         try {
-            const m = await apiFetch<{ menu: { current: Menu, next: Menu }, currentMonday: string, nextMonday: string }>('/api/menu')
+            const [m, r, w] = await Promise.all([
+                apiFetch<{ menu: { current: Menu, next: Menu }, currentMonday: string, nextMonday: string }>('/api/menu'),
+                apiFetch<{ reservations: Reservation[] }>('/api/reservations/me'),
+                apiFetch<ReservationWindow>('/api/reservations/window'),
+            ])
             setMenus(m.menu)
             setDates({ current: m.currentMonday, next: m.nextMonday })
-
-            // Default view mode logic:
-            const today = new Date().getDay()
-            if (today >= 1 && today <= 3) {
-                setViewMode('next')
-            } else {
-                setViewMode('current')
-            }
-
-            const r = await apiFetch<{ reservations: Reservation[] }>('/api/reservations/me')
             setUserReservations(r.reservations)
+            setWindow_(w)
+
+            // Default view: Mon-Wed → next, Thu-Sun → next too (always start on 'next')
+            setViewMode('next')
         } catch (e) {
             console.error(e)
         }
@@ -77,11 +88,29 @@ export default function UserDashboard() {
         }))
     }
 
+    // Client-side validation before hitting the API
+    const validateForm = (): string | null => {
+        if (!timeSlot) return 'Debes seleccionar un horario de retiro.'
+        for (const day of DAYS) {
+            if (!selections[day]?.meal) return `Falta seleccionar la comida del ${day}.`
+            if (!selections[day]?.dessert) return `Falta seleccionar el postre del ${day}.`
+        }
+        return null
+    }
+
     const handleSubmit = async () => {
-        if (!dates) return
+        if (!dates || !window_) return
+
+        // Validate first — don't hit the API with incomplete data
+        const validationError = validateForm()
+        if (validationError) {
+            error(validationError)
+            return
+        }
+
         setLoading(true)
         try {
-            const targetDate = viewMode === 'current' ? dates.current : dates.next
+            const targetDate = window_.activeWeek
             const payload = {
                 weekStart: targetDate,
                 timeSlot,
@@ -89,16 +118,18 @@ export default function UserDashboard() {
                     day: d,
                     meal: selections[d]?.meal,
                     dessert: selections[d]?.dessert,
-                    bread: selections[d]?.bread
+                    bread: selections[d]?.bread ?? false
                 }))
             }
             await apiFetch('/api/reservations', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             })
-            success('Reserva guardada con exito')
 
-            // Reload reservations to update state
+            setLastSavedWeek(targetDate)
+            success('¡Reserva guardada con éxito!')
+
+            // Reload to keep state consistent
             const r = await apiFetch<{ reservations: Reservation[] }>('/api/reservations/me')
             setUserReservations(r.reservations)
         } catch (e: any) {
@@ -108,7 +139,7 @@ export default function UserDashboard() {
         }
     }
 
-    if (!menus || !dates) {
+    if (!menus || !dates || !window_) {
         return (
             <Layout>
                 <div style={{ marginBottom: '2rem' }}>
@@ -148,55 +179,39 @@ export default function UserDashboard() {
     const activeDate = viewMode === 'current' ? dates.current : dates.next
     const myRes = userReservations.find(r => r.week === activeDate)
 
-    const { settings } = useSettings()
+    // Derive display state from the backend window (authoritative)
+    const { isReservationOpen, deadlineTime, deadlineDay, reason } = window_
+    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    const deadlineName = dayNames[deadlineDay]
 
-    // Reservation Window Logic
-    const today = new Date().getDay()
-    // Normalizar domingo (0) a 7 para facilitar comparaciones si la semana empieza el lunes
-    const currentDay = today === 0 ? 7 : today
-    const deadlineDay = settings.deadlineDay === 0 ? 7 : settings.deadlineDay
+    // User can edit only the next week while reservations are open
+    const canEdit = viewMode === 'next' && isReservationOpen
 
-    const isNextWeek = viewMode === 'next'
-    const isWeekend = today === 0 || today === 6;
-    const isReservationOpen = isNextWeek && (isWeekend || currentDay <= deadlineDay)
-    const canEdit = isNextWeek ? isReservationOpen : false
-
-    // Status Message
+    // Status badge
     let statusMessage = ''
     let statusColor = ''
-    
-    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-    const deadlineName = dayNames[settings.deadlineDay]
-
     if (viewMode === 'current') {
         statusMessage = 'Semana en curso (Solo lectura)'
         statusColor = 'badge-gray'
+    } else if (isReservationOpen) {
+        statusMessage = `Reservas Abiertas — cierra el ${deadlineName} ${deadlineTime}`
+        statusColor = 'badge-success'
     } else {
-        if (isReservationOpen) {
-            statusMessage = `Reservas Abiertas (Cierra el ${deadlineName})`
-            statusColor = 'badge-success'
-        } else {
-            statusMessage = `Reservas Cerradas (Se abren el Lunes)`
-            statusColor = 'badge-danger'
-        }
+        statusMessage = 'Reservas Cerradas'
+        statusColor = 'badge-danger'
     }
 
     const formatDateRange = (startDateStr: string) => {
         if (!startDateStr) return ''
         const [y, m, d] = startDateStr.split('-').map(Number)
         const start = new Date(y, m - 1, d)
-        const end = new Date(y, m - 1, d + 4) // Friday
-
-
-
-        const startDay = start.getDate().toString().padStart(2, '0')
-        const endDay = end.getDate().toString().padStart(2, '0')
-
-        return `Semana del lunes ${startDay}/${(start.getMonth() + 1).toString().padStart(2, '0')}/${start.getFullYear()} al viernes ${endDay}/${(end.getMonth() + 1).toString().padStart(2, '0')}/${end.getFullYear()}`
+        const end = new Date(y, m - 1, d + 4)
+        const pad = (n: number) => n.toString().padStart(2, '0')
+        return `Semana del lunes ${pad(start.getDate())}/${pad(start.getMonth() + 1)}/${start.getFullYear()} al viernes ${pad(end.getDate())}/${pad(end.getMonth() + 1)}/${end.getFullYear()}`
     }
 
     return (
-        <Layout title="Reserva de Menu" subtitle={formatDateRange(activeDate)}>
+        <Layout title="Reserva de Menú" subtitle={formatDateRange(activeDate)}>
             <div className="flex-between" style={{ marginBottom: '1rem' }}>
                 <div className="btn-group">
                     <button
@@ -209,50 +224,65 @@ export default function UserDashboard() {
                         className={`btn ${viewMode === 'next' ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setViewMode('next')}
                     >
-                        Semana Proxima
+                        Semana Próxima
                     </button>
                 </div>
                 <div className={`badge ${statusColor}`}>{statusMessage}</div>
             </div>
 
             <div className="grid">
+                {/* ── Status / Confirmation card ── */}
                 {myRes ? (
                     <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
-                        <h3>Tu reserva esta confirmada</h3>
-                        <p>Horario: {myRes.timeSlot}</p>
-                        {canEdit ? (
-                            <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                                Puedes modificar tu reserva hasta el jueves 23:59.
-                            </p>
+                        {lastSavedWeek === activeDate ? (
+                            <>
+                                <h3 style={{ color: 'var(--accent)' }}>✓ Reserva guardada correctamente</h3>
+                                <p>
+                                    <strong>Semana:</strong> {formatDateRange(activeDate)}
+                                </p>
+                                <p><strong>Horario de retiro:</strong> {myRes.timeSlot}</p>
+                                {canEdit && (
+                                    <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                                        Podés modificar tu reserva hasta el {deadlineName} a las {deadlineTime}.
+                                    </p>
+                                )}
+                            </>
                         ) : (
-                             <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                                 Ya no puedes modificar esta reserva (Cierre: Jueves 23:59).
-                             </p>
+                            <>
+                                <h3>Tu reserva está confirmada</h3>
+                                <p><strong>Horario:</strong> {myRes.timeSlot}</p>
+                                {canEdit ? (
+                                    <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                                        Podés modificar tu reserva hasta el {deadlineName} a las {deadlineTime}.
+                                    </p>
+                                ) : (
+                                    <p className="muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                                        Ya no podés modificar esta reserva (venció el {deadlineName} a las {deadlineTime}).
+                                    </p>
+                                )}
+                            </>
                         )}
                     </div>
                 ) : (
                     <div className={`card ${canEdit ? 'card-warning' : 'card-disabled'}`}>
                         {canEdit ? (
                             <>
-                                <h3>No has hecho la reserva</h3>
-                                <p className="muted">Completa el formulario para reservar.</p>
+                                <h3>No hiciste la reserva aún</h3>
+                                <p className="muted">Completá el formulario para reservar.</p>
                                 <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: 500 }}>
-                                    Nota: Tienes tiempo hasta las 23:59 del jueves para realizar o modificar tu pedido.
+                                    Tenés tiempo hasta las {deadlineTime} del {deadlineName}.
                                 </p>
                             </>
                         ) : (
                             <>
                                 <h3>Reserva no disponible</h3>
-                                <p className="muted">
-                                    {isNextWeek
-                                        ? 'El periodo de reserva para la proxima semana ha finalizado (Cierra los Jueves 23:59).'
-                                        : 'El menu de la semana actual no se puede modificar.'}
-                                </p>
+                                <p className="muted">{viewMode === 'next' ? reason : 'El menú de la semana actual no se puede modificar.'}</p>
                             </>
                         )}
                     </div>
                 )}
 
+                {/* ── Day selection grid ── */}
                 <div className="card">
                     <div className="grid-3">
                         {DAYS.map(day => (
@@ -304,6 +334,7 @@ export default function UserDashboard() {
                     </div>
                 </div>
 
+                {/* ── Submit section ── */}
                 {canEdit && (
                     <div className="card" id="confirm-section">
                         <h3 style={{ marginBottom: '1rem' }}>Confirmar Reserva</h3>
@@ -316,7 +347,7 @@ export default function UserDashboard() {
                                 </select>
                             </div>
 
-                            <button className="btn btn-primary" onClick={handleSubmit} disabled={loading || !timeSlot}>
+                            <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
                                 {loading ? 'Guardando...' : (myRes ? 'Modificar Reserva' : 'Confirmar Reserva')}
                             </button>
                         </div>

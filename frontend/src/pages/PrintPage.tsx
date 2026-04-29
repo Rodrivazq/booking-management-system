@@ -24,9 +24,18 @@ export default function PrintPage() {
 
     const loadData = async () => {
         try {
-            const r = await apiFetch<{ reservations: Reservation[], users: User[] }>('/api/reservations/admin');
-            setReservations(r.reservations);
-            setUsers(r.users);
+            // Fetch ALL reservations for this week (no pagination limit)
+            const weekParam = week ? `&week=${encodeURIComponent(week)}` : '';
+            const r = await apiFetch<{ reservations: Reservation[] }>(
+                `/api/reservations/admin?limit=9999&page=1${weekParam}`
+            );
+            setReservations(r.reservations ?? []);
+
+            // Fetch ALL users so DailyDetailReport / slot reports have complete data
+            const u = await apiFetch<{ users: User[] }>(
+                `/api/reservations/admin?type=users&limit=9999&page=1`
+            );
+            setUsers(u.users ?? []);
         } catch (e) {
             console.error(e);
             alert('Error cargando datos');

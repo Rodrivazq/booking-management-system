@@ -3,109 +3,211 @@ import { prismaMock } from './prisma.mock';
 import { createReservation } from '../src/controllers/reservation.controller';
 import { getNextMonday } from '../src/utils/dates';
 
-describe('Reservation Controller - createReservation', () => {
-  const nextMonday = getNextMonday();
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  it('should create a reservation successfully', async () => {
-    // Setup request and response mocks
-    const req = {
-      user: { id: 'user-123' },
-      body: {
-        weekStart: nextMonday,
-        timeSlot: '12:00',
-        selections: [
-          { day: 'lunes', meal: 'Meal A', dessert: 'Dessert A', bread: true },
-          { day: 'martes', meal: 'Meal B', dessert: 'Dessert B', bread: false },
-          { day: 'miercoles', meal: 'Meal A', dessert: 'Dessert A', bread: false },
-          { day: 'jueves', meal: 'Meal B', dessert: 'Dessert B', bread: true },
-          { day: 'viernes', meal: 'Meal A', dessert: 'Dessert A', bread: false },
-        ]
-      }
-    } as any;
+const nextMonday = getNextMonday();
 
-    const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+/** Minimal valid settings object (reservations OPEN — deadline far in the future) */
+const openSettings = () => ({
+    id: 1,
+    deadlineDay: 6,           // Saturday → always after Mon-Fri
+    deadlineTime: '23:59',
+    companyName: 'Test',
+    logoUrl: null,
+    primaryColor: null,
+    secondaryColor: null,
+    secondaryColor2: null,
+    supportEmail: null,
+    supportPhone: null,
+    supportWhatsApp: null,
+    welcomeTitle: null,
+    welcomeMessage: null,
+    loginBackgroundImage: null,
+    maintenanceMode: false,
+    announcementMessage: null,
+    announcementType: null,
+});
 
-    // Prisma Mocks Validation
-    prismaMock.settings.findFirst.mockResolvedValue({
-      id: 1, 
-      deadlineDay: 6, 
-      deadlineTime: '23:59', // Saturday
-      companyName: 'Test',
-      logoUrl: null,
-      primaryColor: null,
-      secondaryColor: null,
-      supportEmail: null,
-      supportPhone: null,
-      supportWhatsApp: null,
-      announcementMessage: null,
-      announcementType: null
-    } as any);
+/** Minimal valid menu for nextMonday */
+const validMenu = () => ({
+    id: 'menu-1',
+    weekStart: nextMonday,
+    breadAvailable: true,
+    days: JSON.stringify({
+        lunes:     { meals: ['Meal A'], desserts: ['Dessert A'] },
+        martes:    { meals: ['Meal B'], desserts: ['Dessert B'] },
+        miercoles: { meals: ['Meal A'], desserts: ['Dessert A'] },
+        jueves:    { meals: ['Meal B'], desserts: ['Dessert B'] },
+        viernes:   { meals: ['Meal A'], desserts: ['Dessert A'] },
+    }),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+});
 
-    prismaMock.weeklyMenu.findUnique.mockResolvedValue({
-      id: 1, weekStart: nextMonday, breadAvailable: true,
-      days: JSON.stringify({
-         lunes: { meals: ['Meal A'], desserts: ['Dessert A'] },
-         martes: { meals: ['Meal B'], desserts: ['Dessert B'] },
-         miercoles: { meals: ['Meal A'], desserts: ['Dessert A'] },
-         jueves: { meals: ['Meal B'], desserts: ['Dessert B'] },
-         viernes: { meals: ['Meal A'], desserts: ['Dessert A'] }
-      }),
-      createdAt: new Date(), updatedAt: new Date()
-    } as any);
+/** Five valid day selections */
+const validSelections = () => [
+    { day: 'lunes',     meal: 'Meal A', dessert: 'Dessert A', bread: true  },
+    { day: 'martes',    meal: 'Meal B', dessert: 'Dessert B', bread: false },
+    { day: 'miercoles', meal: 'Meal A', dessert: 'Dessert A', bread: false },
+    { day: 'jueves',    meal: 'Meal B', dessert: 'Dessert B', bread: true  },
+    { day: 'viernes',   meal: 'Meal A', dessert: 'Dessert A', bread: false },
+];
 
-    prismaMock.reservation.findFirst.mockResolvedValue(null); // No previous res
-    
-    prismaMock.reservation.create.mockResolvedValue({
-      id: 'res-456',
-      userId: 'user-123',
-      weekStart: nextMonday,
-      timeSlot: '12:00',
-      selections: JSON.stringify(req.body.selections),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as any);
+/** Build a minimal Express req/res pair */
+const makeReqRes = (body: object) => ({
+    req: { user: { id: 'user-123' }, body } as any,
+    res: { json: vi.fn(), status: vi.fn().mockReturnThis() } as any,
+});
 
-    await createReservation(req, res);
+const savedReservation = () => ({
+    id: 'res-456',
+    userId: 'user-123',
+    weekStart: nextMonday,
+    timeSlot: '12:00',
+    selections: JSON.stringify(validSelections()),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+});
 
-    expect(prismaMock.reservation.create).toHaveBeenCalled();
-    expect(res.json).toHaveBeenCalledWith({ ok: true, weekStart: nextMonday });
-  });
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
-  it('should fail if deadline has passed', async () => {
-     // Setup request and response mocks
-     const req = {
-        user: { id: 'user-123' },
-        body: { weekStart: nextMonday, timeSlot: '12:00', selections: [
-          { day: 'lunes', meal: 'Meal A', dessert: 'Dessert A', bread: true },
-          { day: 'martes', meal: 'Meal B', dessert: 'Dessert B', bread: false },
-          { day: 'miercoles', meal: 'Meal A', dessert: 'Dessert A', bread: false },
-          { day: 'jueves', meal: 'Meal B', dessert: 'Dessert B', bread: true },
-          { day: 'viernes', meal: 'Meal A', dessert: 'Dessert A', bread: false },
-        ] }
-      } as any;
-  
-      const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+describe('createReservation', () => {
+    beforeEach(() => {
+        vi.useRealTimers();
+    });
 
-      // Mock deadline is very strict, say it passed on Monday of previous week
-      prismaMock.settings.findFirst.mockResolvedValue({
-        id: 1, deadlineDay: 0, deadlineTime: '00:00', // Sometime that implies passage
-        companyName: 'Test', logoUrl: null, primaryColor: null, secondaryColor: null, supportEmail: null, supportPhone: null, supportWhatsApp: null, announcementMessage: null, announcementType: null
-      } as any);
-  
-      // Force test error logic manually if needed, or rely on internal implementation checks.
-      // Since it's deterministic based on "Date.now()", mocking the system time is required for this specific test
-      // Simulate system time on Wednesday but pass deadline logic directly through Mock
-      vi.useFakeTimers();
-      const wednesday = new Date();
-      // Ensure we stay within the same expected week for the date logic test, just push time forward.
-      wednesday.setHours(wednesday.getHours() + 48); // Push arbitrary time
-      vi.setSystemTime(wednesday);
-  
-      await createReservation(req, res);
-      
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('El periodo de reservas ha cerrado') }));
+    // ── 1. Happy path: first reservation ──────────────────────────────────
+    it('creates a new reservation when none exists', async () => {
+        const { req, res } = makeReqRes({
+            weekStart: nextMonday,
+            timeSlot: '12:00',
+            selections: validSelections(),
+        });
 
-      vi.useRealTimers();
-  });
+        prismaMock.settings.findUnique.mockResolvedValue(openSettings() as any);
+        prismaMock.weeklyMenu.findUnique.mockResolvedValue(validMenu() as any);
+        prismaMock.reservation.upsert.mockResolvedValue(savedReservation() as any);
+
+        await createReservation(req, res);
+
+        expect(prismaMock.reservation.upsert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { userId_weekStart: { userId: 'user-123', weekStart: nextMonday } },
+            })
+        );
+        expect(res.json).toHaveBeenCalledWith({ ok: true, weekStart: nextMonday });
+    });
+
+    // ── 2. Upsert on second reservation (update path) ─────────────────────
+    it('updates existing reservation when called again for the same week', async () => {
+        const { req, res } = makeReqRes({
+            weekStart: nextMonday,
+            timeSlot: '13:00',
+            selections: validSelections(),
+        });
+
+        prismaMock.settings.findUnique.mockResolvedValue(openSettings() as any);
+        prismaMock.weeklyMenu.findUnique.mockResolvedValue(validMenu() as any);
+        prismaMock.reservation.upsert.mockResolvedValue({ ...savedReservation(), timeSlot: '13:00' } as any);
+
+        await createReservation(req, res);
+
+        expect(prismaMock.reservation.upsert).toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith({ ok: true, weekStart: nextMonday });
+    });
+
+    // ── 3. Reject wrong week ──────────────────────────────────────────────
+    it('rejects a reservation for the wrong weekStart', async () => {
+        const { req, res } = makeReqRes({
+            weekStart: '2020-01-06',   // clearly wrong
+            timeSlot: '12:00',
+            selections: validSelections(),
+        });
+
+        prismaMock.settings.findUnique.mockResolvedValue(openSettings() as any);
+        // weeklyMenu not needed — blocked before we get there
+
+        await createReservation(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ error: expect.stringContaining('solo se pueden hacer para la semana') })
+        );
+    });
+
+    // ── 4. Reject when deadline has passed ───────────────────────────────
+    it('rejects reservation when the deadline has already passed', async () => {
+        vi.useFakeTimers();
+        const tuesday = new Date();
+        const daysUntilTuesday = (2 - tuesday.getDay() + 7) % 7 || 7;
+        tuesday.setDate(tuesday.getDate() + daysUntilTuesday);
+        vi.setSystemTime(tuesday);
+
+        const closedWeek = getNextMonday();
+        const { req, res } = makeReqRes({
+            weekStart: closedWeek,
+            timeSlot: '12:00',
+            selections: validSelections(),
+        });
+
+        // deadlineDay = 1 (Monday) at 00:01 → always in the past during a normal weekday run
+        prismaMock.settings.findUnique.mockResolvedValue({
+            ...openSettings(),
+            deadlineDay: 1,
+            deadlineTime: '00:01',
+        } as any);
+
+        await createReservation(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ error: expect.stringContaining('ha cerrado') })
+        );
+
+        vi.useRealTimers();
+    });
+
+    // ── 5. Reject invalid meal selection ─────────────────────────────────
+    it('rejects a reservation with an invalid meal option', async () => {
+        const badSelections = validSelections();
+        badSelections[0] = { day: 'lunes', meal: 'INVALID_MEAL', dessert: 'Dessert A', bread: false };
+
+        const { req, res } = makeReqRes({
+            weekStart: nextMonday,
+            timeSlot: '12:00',
+            selections: badSelections,
+        });
+
+        prismaMock.settings.findUnique.mockResolvedValue(openSettings() as any);
+        prismaMock.weeklyMenu.findUnique.mockResolvedValue(validMenu() as any);
+
+        await createReservation(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ error: expect.stringContaining('Opción inválida en lunes') })
+        );
+    });
+
+    // ── 6. Reject missing selections (only 4 days) ───────────────────────
+    it('rejects when fewer than 5 day selections are provided', async () => {
+        const { req, res } = makeReqRes({
+            weekStart: nextMonday,
+            timeSlot: '12:00',
+            selections: validSelections().slice(0, 4),   // 4 instead of 5
+        });
+
+        prismaMock.settings.findUnique.mockResolvedValue(openSettings() as any);
+
+        await createReservation(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ error: expect.stringContaining('selección para cada día') })
+        );
+    });
 });
