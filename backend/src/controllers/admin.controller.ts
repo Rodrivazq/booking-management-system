@@ -115,7 +115,7 @@ export const changeUserRole = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Rol inválido. Valores permitidos: user, admin, superadmin' });
     }
 
-    // Prevent self-role change (accidental lockout)
+    // Rule 1: Never allow self-role change
     if (req.user.id === userId) {
         return res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
     }
@@ -124,9 +124,15 @@ export const changeUserRole = async (req: Request, res: Response) => {
         const target = await prisma.user.findUnique({ where: { id: userId } });
         if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        // Only superadmin can touch another superadmin
-        if (target.role === 'superadmin') {
-            return res.status(403).json({ error: 'No se puede modificar el rol de un Super Admin' });
+        // Rule 2: If we are demoting a superadmin, ensure they are not the last one
+        const isDemotingSuperadmin = target.role === 'superadmin' && role !== 'superadmin';
+        if (isDemotingSuperadmin) {
+            const superadminCount = await prisma.user.count({ where: { role: 'superadmin' } });
+            if (superadminCount <= 1) {
+                return res.status(400).json({
+                    error: 'No puedes quitar el rol al único Super Admin del sistema.'
+                });
+            }
         }
 
         const updated = await prisma.user.update({
@@ -140,4 +146,3 @@ export const changeUserRole = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error al cambiar el rol del usuario' });
     }
 };
-

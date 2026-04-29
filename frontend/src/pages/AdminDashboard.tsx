@@ -11,6 +11,7 @@ import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarU
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 type UserRole = User['role']
+const USER_ROLES: UserRole[] = ['user', 'admin', 'superadmin']
 
 export default function AdminDashboard() {
     const navigate = useNavigate()
@@ -1134,15 +1135,13 @@ function UserRow({
                 </div>
             </div>
 
-            {/* Role change — only visible to superadmin, not on own card, not on other superadmins */}
+            {/* Role change — only visible to superadmin, hidden on own card */}
             {currentUserRole === 'superadmin' && (
                 <div style={{ padding: '0.75rem', background: 'var(--bg)', borderRadius: '6px', border: '1px solid var(--border)' }}>
                     <div className="flex-between" style={{ alignItems: 'center', gap: '0.5rem' }}>
                         <span className="muted" style={{ fontSize: '0.85rem', fontWeight: 500 }}>Rol:</span>
                         {isSelf ? (
                             <span className="badge badge-gray" style={{ fontSize: '0.8rem' }}>No puedes cambiar tu propio rol</span>
-                        ) : user.role === 'superadmin' ? (
-                            <span className="badge badge-error" style={{ fontSize: '0.8rem' }}>Super Admin protegido</span>
                         ) : (
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                 <select
@@ -1150,7 +1149,10 @@ function UserRow({
                                     style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', width: 'auto' }}
                                     value={pendingRole}
                                     disabled={roleChanging}
-                                    onChange={e => setPendingRole(e.target.value as UserRole)}
+                                    onChange={e => {
+                                        const nextRole = e.target.value as UserRole;
+                                        if (USER_ROLES.includes(nextRole)) setPendingRole(nextRole as UserRole);
+                                    }}
                                 >
                                     <option value="user">Usuario</option>
                                     <option value="admin">Administrador</option>
