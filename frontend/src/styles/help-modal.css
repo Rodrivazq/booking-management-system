@@ -1,0 +1,183 @@
+/* Help Modal specific styles */
+.help-modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.help-modal-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+@media (min-width: 768px) {
+  .help-modal-container {
+    flex-direction: row;
+    height: 70vh;
+    min-height: 500px;
+  }
+}
+
+.help-sidebar {
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  overflow-x: auto;
+  display: flex;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.help-sidebar::-webkit-scrollbar {
+  display: none;
+}
+.help-sidebar {
+  scrollbar-width: none;
+}
+
+@media (min-width: 768px) {
+  .help-sidebar {
+    width: 240px;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+.help-nav-item {
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  color: var(--text-light);
+  text-align: left;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .help-nav-item {
+    border-bottom: none;
+    white-space: normal;
+  }
+  .help-nav-item:hover, .help-nav-item.active {
+    border-bottom: none;
+  }
+}
+
+.help-nav-item:hover {
+  background: var(--card);
+  color: var(--text);
+}
+
+.help-nav-item.active {
+  color: var(--accent);
+  background: var(--card);
+}
+
+@media (max-width: 767px) {
+  .help-nav-item.active {
+    border-bottom-color: var(--accent);
+  }
+}
+@media (min-width: 768px) {
+  .help-nav-item.active {
+    border-left-color: var(--accent);
+  }
+}
+
+.help-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: var(--card);
+}
+
+.help-section {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.help-section h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.help-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.help-callout {
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  border-left: 4px solid var(--accent);
+  background: rgba(22, 163, 74, 0.05);
+  color: var(--text);
+}
+
+.help-callout.warning {
+  border-left-color: #d97706;
+  background: rgba(217, 119, 6, 0.05);
+}
+
+.help-callout.error {
+  border-left-color: #dc2626;
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.help-step-list {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.help-step-list li {
+  margin-bottom: 0.5rem;
+  color: var(--text-light);
+}
+
+.help-step-list li strong {
+  color: var(--text);
+}
+
+.help-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.help-badge.superadmin {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.help-badge.admin {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.help-badge.user {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}

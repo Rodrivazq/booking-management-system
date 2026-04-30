@@ -2,28 +2,12 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import nodemailer from 'nodemailer';
-import { Resend } from 'resend';
 import prisma from '../utils/prisma';
 import logger from '../utils/logger';
 import { verifyTurnstileToken } from '../utils/turnstile';
-import { JWT_SECRET, FRONTEND_URL, SMTP, RESEND_API_KEY, TURNSTILE_SECRET_KEY } from '../config/env';
+import { JWT_SECRET, FRONTEND_URL, TURNSTILE_SECRET_KEY } from '../config/env';
 import { getNextMonday } from '../utils/dates';
-
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
-
-function createTransport() {
-    if (!SMTP.host) return null;
-    return nodemailer.createTransport({
-        host: SMTP.host,
-        port: Number(SMTP.port) || 587,
-        secure: SMTP.secure,
-        auth: SMTP.user ? { user: SMTP.user, pass: SMTP.pass || '' } : undefined,
-    });
-}
-
-const mailer = createTransport();
-
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email.service';
 
 
 export const register = async (req: Request, res: Response) => {
@@ -85,60 +69,7 @@ export const register = async (req: Request, res: Response) => {
 
         const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
-        if (resend) {
-            try {
-                await resend.emails.send({
-                    from: 'App de Reservas <no-reply@reservasrealsabor.com.uy>',
-                    to: [user.email],
-                    subject: 'Confirma tu correo electrónico',
-                    html: `
-                    <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 20px; text-align: center;">
-                        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                            <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px; font-weight: bold;">App de Reservas</h2>
-                            <h3 style="color: #374151; font-size: 20px; margin-bottom: 20px;">Verificación de Cuenta</h3>
-                            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-                                Hola <strong>${user.name}</strong> 👋.<br><br>Gracias por registrarte. Para poder ingresar a tu cuenta y empezar a reservar, necesitamos que confirmes tu dirección de correo electrónico haciendo clic en el siguiente botón:
-                            </p>
-                            <a href="${verifyUrl}" style="display: inline-block; background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                                Verificar mi Correo
-                            </a>
-                            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                                Si no creaste esta cuenta, simplemente ignora este correo.
-                            </p>
-                        </div>
-                    </div>
-                    `
-                });
-            } catch (error) {
-                console.error("Resend error (Verification):", error);
-            }
-        } else if (mailer) {
-            mailer.sendMail({
-                to: user.email,
-                from: SMTP.from,
-                subject: 'Confirma tu correo electrónico',
-                text: `Hola ${user.name}. Ingresa a ${verifyUrl} para verificar tu cuenta.`,
-                html: `
-                <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 20px; text-align: center;">
-                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                        <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px; font-weight: bold;">App de Reservas</h2>
-                        <h3 style="color: #374151; font-size: 20px; margin-bottom: 20px;">Verificación de Cuenta</h3>
-                        <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-                            Hola <strong>${user.name}</strong> 👋.<br><br>Gracias por registrarte. Para poder ingresar a tu cuenta y empezar a reservar, necesitamos que confirmes tu dirección de correo electrónico haciendo clic en el siguiente botón:
-                        </p>
-                        <a href="${verifyUrl}" style="display: inline-block; background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                            Verificar mi Correo
-                        </a>
-                        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                            Si no creaste esta cuenta, simplemente ignora este correo.
-                        </p>
-                    </div>
-                </div>
-                `
-            }).catch((err) => console.error('No se pudo enviar email de verificacion', err));
-        } else {
-            console.log('Verification link:', verifyUrl);
-        }
+        await sendVerificationEmail(user, verifyUrl);
 
         res.status(201).json({ message: 'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de ingresar.' });
     } catch (error) {
@@ -224,22 +155,26 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
-    const { identifier } = req.body || {};
-    const searchRaw = (identifier || '').trim();
+    const { email, identifier } = req.body || {};
+    // Use email explicitly if provided, otherwise fallback to identifier (for backwards compatibility)
+    const rawInput = (email || identifier || '').trim();
 
-    if (!searchRaw) return res.status(400).json({ error: 'Debe indicar correo o numero de funcionario' });
+    if (!rawInput) return res.status(400).json({ error: 'Debe indicar su correo electrónico.' });
 
     try {
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { email: searchRaw.toLowerCase() },
-                    { funcNumber: searchRaw }
+                    { email: rawInput.toLowerCase() },
+                    { funcNumber: rawInput } // Fallback just in case, though frontend now asks for email
                 ]
             }
         });
 
-        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+        // Neutral response to avoid user enumeration
+        if (!user) {
+            return res.json({ ok: true, message: 'Si el correo existe, recibirás un enlace para restablecer tu contraseña.' });
+        }
 
         const token = uuidv4();
         const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
@@ -257,52 +192,9 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
         const resetUrl = `${FRONTEND_URL}/reset?token=${token}`;
 
-        if (resend) {
-            try {
-                const data = await resend.emails.send({
-                    from: 'App de Reservas <no-reply@reservasrealsabor.com.uy>',
-                    to: [user.email],
-                    subject: 'Restablecer contraseña',
-                    html: `
-                    <div style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 40px 20px; text-align: center;">
-                        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                            <h2 style="color: #111827; font-size: 24px; margin-bottom: 20px; font-weight: bold;">App de Reservas</h2>
-                            <h3 style="color: #374151; font-size: 20px; margin-bottom: 20px;">Restablecimiento de Contraseña</h3>
-                            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-                                Hola <strong>${user.name}</strong> 👋.<br><br>Hemos recibido una solicitud para restablecer tu contraseña. Si fuiste tú, puedes hacerlo haciendo clic en el siguiente botón:
-                            </p>
-                            <a href="${resetUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                                Definir nueva contraseña
-                            </a>
-                            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                                Este botón será válido por <strong>1 hora</strong>. Si no solicitaste este cambio, simplemente ignora este correo y tu cuenta seguirá segura.
-                            </p>
-                            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-                            <p style="color: #9ca3af; font-size: 12px; margin-bottom: 0;">
-                                Si tienes problemas con el botón, copia y pega este enlace en tu navegador:<br>
-                                <a href="${resetUrl}" style="color: #2563eb; word-break: break-all;">${resetUrl}</a>
-                            </p>
-                        </div>
-                    </div>
-                    `
-                });
-                console.log("Resend data:", data);
-            } catch (error) {
-                console.error("Resend error:", error);
-            }
-        } else if (mailer) {
-            mailer.sendMail({
-                to: user.email,
-                from: SMTP.from,
-                subject: 'Restablecer contrasena',
-                text: `Ingresa a ${resetUrl} para definir una nueva contrasena. El enlace expira en 1 hora.`,
-                html: `<p>Ingresa a <a href="${resetUrl}">${resetUrl}</a> para definir una nueva contrasena.</p><p>Vence en 1 hora.</p>`
-            }).catch((err) => console.error('No se pudo enviar email de reset', err));
-        } else {
-            console.log('Reset link:', resetUrl);
-        }
+        await sendPasswordResetEmail(user, resetUrl);
 
-        res.json({ ok: true });
+        res.json({ ok: true, message: 'Si el correo existe, recibirás un enlace para restablecer tu contraseña.' });
     } catch (error) {
         console.error('Forgot password error:', error);
         res.status(500).json({ error: 'Error al procesar solicitud' });

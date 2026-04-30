@@ -26,6 +26,7 @@ model User {
 
   reservations  Reservation[]
   passwordResets PasswordReset[]
+  dishRatings    DishRating[]
 }
 
 model Settings {
@@ -64,9 +65,11 @@ model Reservation {
   selections  String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  dishRatings DishRating[]
 
   @@unique([userId, weekStart])
 }
+
 
 model PasswordReset {
   token     String   @unique
@@ -74,4 +77,21 @@ model PasswordReset {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model DishRating {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  weekStart     String
+  day           String
+  itemType      String   // "meal" | "dessert"
+  itemName      String
+  rating        String   // "liked" | "neutral" | "disliked"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, weekStart, day, itemType, itemName])
 }

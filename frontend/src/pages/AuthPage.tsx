@@ -30,6 +30,8 @@ export default function AuthPage() {
     const [turnstileToken, setTurnstileToken] = useState<string>('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [showForgotModal, setShowForgotModal] = useState(false)
+    const [forgotEmail, setForgotEmail] = useState('')
     const setUser = useAuthStore((s) => s.setUser)
     const navigate = useNavigate()
     const { addToast } = useToast()
@@ -115,18 +117,25 @@ export default function AuthPage() {
         }
     }
 
-    const handleForgot = async () => {
-        if (!formData.identifier) {
-            addToast('Ingresa tu correo o nro de funcionario para recuperar', 'error')
+    const handleForgot = () => {
+        setShowForgotModal(true);
+        setForgotEmail(''); // Clear previous input
+    }
+
+    const submitForgot = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!forgotEmail) {
+            addToast('Por favor, ingresa tu correo electrónico.', 'error')
             return
         }
         setLoading(true)
         try {
-            await apiFetch('/api/auth/forgot-password', {
+            const res = await apiFetch<{ message?: string }>('/api/auth/forgot-password', {
                 method: 'POST',
-                body: JSON.stringify({ identifier: formData.identifier })
+                body: JSON.stringify({ email: forgotEmail })
             })
-            addToast('Se ha recibido tu solicitud. Revisa tu bandeja de entrada o spam.', 'info')
+            addToast(res.message || 'Si el correo existe, recibirás un enlace para restablecer tu contraseña.', 'info')
+            setShowForgotModal(false)
         } catch (e: any) {
             addToast(e.message || 'Error al solicitar recuperación', 'error')
         } finally {
@@ -411,6 +420,40 @@ export default function AuthPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Forgot Password Modal */}
+            {showForgotModal && (
+                <div className="modal-backdrop animate-fade-in" onClick={() => !loading && setShowForgotModal(false)}>
+                    <div className="modal animate-slide-up" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Recuperar Contraseña</h2>
+                            <button className="btn btn-danger" onClick={() => setShowForgotModal(false)} disabled={loading}>&times;</button>
+                        </div>
+                        <form onSubmit={submitForgot} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+                                Ingresa el correo electrónico asociado a tu cuenta. Si el correo existe en nuestro sistema, te enviaremos un enlace para que definas una nueva contraseña.
+                            </p>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Correo Electrónico</label>
+                                <input
+                                    className="input"
+                                    type="email"
+                                    value={forgotEmail}
+                                    onChange={e => setForgotEmail(e.target.value)}
+                                    placeholder="ej. juan@empresa.com"
+                                    required
+                                    disabled={loading}
+                                />
+                            </div>
+                            <div className="flex-end" style={{ marginTop: '0.5rem' }}>
+                                <button type="submit" className="btn btn-primary" disabled={loading}>
+                                    {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

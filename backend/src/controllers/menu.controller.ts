@@ -12,32 +12,10 @@ export const getMenu = async (req: Request, res: Response) => {
         let currentMenu = await prisma.weeklyMenu.findUnique({ where: { weekStart: currentMonday } });
         let nextMenu = await prisma.weeklyMenu.findUnique({ where: { weekStart: nextMonday } });
 
-        // Initialize if missing
-        if (!currentMenu) {
-            currentMenu = await prisma.weeklyMenu.create({
-                data: {
-                    weekStart: currentMonday,
-                    days: JSON.stringify(cloneDefaultMenuDays()),
-                    breadAvailable: true
-                }
-            });
-        }
-
-        if (!nextMenu) {
-            nextMenu = await prisma.weeklyMenu.create({
-                data: {
-                    weekStart: nextMonday,
-                    days: JSON.stringify(cloneDefaultMenuDays()),
-                    breadAvailable: true
-                }
-            });
-        }
-
-        // Parse JSON for response
         const response = {
             menu: {
-                current: { ...currentMenu, days: JSON.parse(currentMenu.days as string) },
-                next: { ...nextMenu, days: JSON.parse(nextMenu.days as string) }
+                current: currentMenu ? { ...currentMenu, days: JSON.parse(currentMenu.days as string) } : null,
+                next: nextMenu ? { ...nextMenu, days: JSON.parse(nextMenu.days as string) } : null
             },
             currentMonday,
             nextMonday
@@ -61,30 +39,45 @@ export const updateMenu = async (req: Request, res: Response) => {
 
     try {
         const menu = await prisma.weeklyMenu.findUnique({ where: { weekStart: targetWeekStart } });
-        if (!menu) return res.status(404).json({ error: 'Menu no encontrado' });
-
-        const currentDays: any = JSON.parse(menu.days as string);
+        const shouldGenerateBaseMenu = Object.keys(days).length === 0;
+        const sourceDays = shouldGenerateBaseMenu ? cloneDefaultMenuDays() : days;
         const normalized: any = {};
 
         for (const day of DAY_KEYS) {
-            const entry = days[day] || {};
-            const fallback = currentDays[day] || cloneDefaultMenuDays()[day as any];
+            const entry = sourceDays[day];
+            if (!entry) {
+                return res.status(400).json({ error: `Falta configurar el dia ${day}` });
+            }
 
-            let meals = Array.isArray(entry.meals) ? entry.meals.map((m: any) => String(m || '').trim()) : [];
-            let desserts = Array.isArray(entry.desserts) ? entry.desserts.map((d: any) => String(d || '').trim()) : [];
+            const meals = Array.isArray(entry.meals)
+                ? entry.meals.map((m: any) => String(m || '').trim()).filter(Boolean).slice(0, 3)
+                : [];
+            const desserts = Array.isArray(entry.desserts)
+                ? entry.desserts.map((d: any) => String(d || '').trim()).filter(Boolean).slice(0, 3)
+                : [];
 
-            meals = [...meals.filter(Boolean), ...(fallback.meals || [])].slice(0, 3);
-            desserts = [...desserts.filter(Boolean), ...(fallback.desserts || [])].slice(0, 3);
-
-            if (meals.length !== 3 || desserts.length !== 3) return res.status(400).json({ error: `Cada dia debe tener 3 comidas y 3 postres (${day})` });
+            if (meals.length === 0 || desserts.length === 0) {
+                return res.status(400).json({ error: `Cada dia debe tener al menos 1 comida y 1 postre (${day})` });
+            }
 
             normalized[day] = { meals, desserts };
         }
 
-        const updatedMenu = await prisma.weeklyMenu.update({
-            where: { weekStart: targetWeekStart },
-            data: { days: JSON.stringify(normalized) }
-        });
+        let updatedMenu;
+        if (menu) {
+            updatedMenu = await prisma.weeklyMenu.update({
+                where: { weekStart: targetWeekStart },
+                data: { days: JSON.stringify(normalized) }
+            });
+        } else {
+            updatedMenu = await prisma.weeklyMenu.create({
+                data: {
+                    weekStart: targetWeekStart,
+                    days: JSON.stringify(normalized),
+                    breadAvailable: true
+                }
+            });
+        }
 
         // We need to return the full menu structure { current, next } because frontend expects it
         

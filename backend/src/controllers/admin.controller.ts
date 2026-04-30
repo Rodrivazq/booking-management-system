@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../utils/prisma';
+import { sendAdminCreatedUserEmail } from '../services/email.service';
 
 export const updateUserDetails = async (req: Request, res: Response) => {
     const { userId } = req.params;
@@ -98,6 +99,9 @@ export const createUser = async (req: Request, res: Response) => {
                 isEmailVerified: true,
             }
         });
+
+        // Send a welcome email explaining they can use "forgot password" to set one if needed
+        await sendAdminCreatedUserEmail(newUser);
 
         res.json({ ok: true, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, funcNumber: newUser.funcNumber, documentId: newUser.documentId } });
     } catch (error) {

@@ -10,6 +10,7 @@ import qrRoutes from './routes/qr.routes';
 import reportsRoutes from './routes/reportsRoutes';
 import settingsRoutes from './routes/settings.routes';
 import statsRoutes from './routes/stats.routes';
+import ratingsRoutes from './routes/ratings.routes';
 
 import { startReminderCron } from './jobs/reminder';
 import helmet from 'helmet';
@@ -90,6 +91,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/ratings', ratingsRoutes);
 
 // -----------------------------
 // HEALTH CHECK
