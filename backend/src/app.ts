@@ -25,6 +25,10 @@ import { getNextMonday } from './utils/dates';
 
 const app = express();
 
+// Railway runs the app behind a reverse proxy. Trust the first proxy hop so
+// express-rate-limit can read X-Forwarded-For without rejecting requests.
+app.set('trust proxy', 1);
+
 // -----------------------------
 // LOGGING Y SEGURIDAD BÁSICA
 // -----------------------------
