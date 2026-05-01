@@ -1,0 +1,3 @@
+name,email,funcNumber,documentId,phoneNumber,role
+Juan Perez,juan.perez@empresa.com,FUNC001,12345678,099123456,user
+Ana Silva,ana.silva@empresa.com,FUNC002,87654321,098765432,admin
