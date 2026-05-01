@@ -9,6 +9,13 @@ export const updateUserDetails = async (req: Request, res: Response) => {
     const { funcNumber, email, phoneNumber, documentId } = req.body || {};
 
     try {
+        const targetUser = await prisma.user.findUnique({ where: { id: userId } });
+        if (!targetUser) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        if (targetUser.role === 'superadmin' && req.user.role !== 'superadmin') {
+            return res.status(403).json({ error: 'Un Administrador no puede editar a un Super Admin' });
+        }
+
         const normalizedFunc = funcNumber ? String(funcNumber).replace(/\s+/g, '').toUpperCase() : undefined;
         // Check for conflicts
         if (normalizedFunc) {

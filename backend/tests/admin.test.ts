@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { changeUserRole, createUser } from '../src/controllers/admin.controller';
+import { changeUserRole, createUser, updateUserDetails } from '../src/controllers/admin.controller';
 
 vi.mock('../src/services/email.service', () => ({
   sendAdminCreatedUserEmail: vi.fn().mockResolvedValue(true)
@@ -17,6 +17,22 @@ const makeReqRes = (actorId: string, targetId: string, newRole: string) => ({
         user: { id: actorId, role: 'superadmin' },
         params: { userId: targetId },
         body: { role: newRole },
+    } as any,
+    res: {
+        json: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+    } as any,
+});
+
+const makeDetailsReqRes = (
+    actorRole: string,
+    targetId: string,
+    body: Record<string, unknown> = { email: 'updated@example.com' }
+) => ({
+    req: {
+        user: { id: 'actor-1', role: actorRole },
+        params: { userId: targetId },
+        body,
     } as any,
     res: {
         json: vi.fn(),
@@ -181,5 +197,96 @@ describe('createUser', () => {
             emailSent: false,
             warning: expect.stringContaining('proveedor de correo no está configurado o falló')
         }));
+    });
+});
+
+describe('updateUserDetails', () => {
+    it('rejects a standard admin editing a superadmin profile', async () => {
+        const { req, res } = makeDetailsReqRes('admin', 'super-1', {
+            email: 'takeover@example.com',
+        });
+
+        prismaMock.user.findUnique.mockResolvedValue(userRecord('super-1', 'superadmin') as any);
+
+        await updateUserDetails(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ error: expect.stringContaining('Super Admin') })
+        );
+        expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+        expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it('allows a superadmin editing another superadmin profile', async () => {
+        const { req, res } = makeDetailsReqRes('superadmin', 'super-2', {
+            email: ' Owner@Example.COM ',
+            funcNumber: ' adm 001 ',
+            documentId: ' 1 2 3 4 ',
+            phoneNumber: ' 099123456 ',
+        });
+
+        prismaMock.user.findUnique.mockResolvedValue(userRecord('super-2', 'superadmin') as any);
+        prismaMock.user.findFirst.mockResolvedValue(null);
+        prismaMock.user.update.mockResolvedValue({
+            ...userRecord('super-2', 'superadmin'),
+            email: 'owner@example.com',
+            funcNumber: 'ADM001',
+            documentId: '1 2 3 4',
+            phoneNumber: '099123456',
+        } as any);
+
+        await updateUserDetails(req, res);
+
+        expect(prismaMock.user.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { id: 'super-2' },
+                data: expect.objectContaining({
+                    email: 'owner@example.com',
+                    funcNumber: 'ADM001',
+                    documentId: '1 2 3 4',
+                    phoneNumber: '099123456',
+                }),
+            })
+        );
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ ok: true, user: expect.objectContaining({ email: 'owner@example.com' }) })
+        );
+    });
+
+    it('allows a standard admin editing a regular user profile', async () => {
+        const { req, res } = makeDetailsReqRes('admin', 'user-1', {
+            phoneNumber: ' 091234567 ',
+        });
+
+        prismaMock.user.findUnique.mockResolvedValue(userRecord('user-1', 'user') as any);
+        prismaMock.user.update.mockResolvedValue({
+            ...userRecord('user-1', 'user'),
+            phoneNumber: '091234567',
+        } as any);
+
+        await updateUserDetails(req, res);
+
+        expect(prismaMock.user.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { id: 'user-1' },
+                data: expect.objectContaining({ phoneNumber: '091234567' }),
+            })
+        );
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+    });
+
+    it('returns 404 when the target user does not exist', async () => {
+        const { req, res } = makeDetailsReqRes('admin', 'missing-user');
+
+        prismaMock.user.findUnique.mockResolvedValue(null);
+
+        await updateUserDetails(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({ error: expect.stringContaining('Usuario no encontrado') })
+        );
+        expect(prismaMock.user.update).not.toHaveBeenCalled();
     });
 });
