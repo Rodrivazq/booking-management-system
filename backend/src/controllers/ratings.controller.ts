@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
+import { getNowUY } from '../utils/dates';
 
 const VALID_RATINGS = ['liked', 'neutral', 'disliked'] as const;
 const VALID_ITEM_TYPES = ['meal', 'dessert'] as const;
@@ -89,12 +90,13 @@ export async function upsertRating(req: Request, res: Response) {
         const dayIndex = DAYS_ES.indexOf(day); // 0 = lunes
         const [y, m, d_] = weekStart.split('-').map(Number);
         const mealDate = new Date(y, m - 1, d_ + dayIndex); // lunes + offset
-        mealDate.setHours(23, 59, 59, 999);
-        const now = new Date();
+        mealDate.setHours(0, 0, 0, 0); // Desde las 00:00 del día correspondiente
+        
+        const now = getNowUY();
 
         if (now < mealDate) {
             return res.status(403).json({
-                error: `Solo puedes calificar platos después del día correspondiente (${day})`,
+                error: `Solo puedes calificar platos a partir del día correspondiente (${day})`,
             });
         }
 

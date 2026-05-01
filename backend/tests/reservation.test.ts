@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { createReservation, getUsersWithoutReservation } from '../src/controllers/reservation.controller';
+import { createReservation, getUsersWithoutReservation, computeWindowStatus } from '../src/controllers/reservation.controller';
 import { getNextMonday } from '../src/utils/dates';
 
 // ---------------------------------------------------------------------------
@@ -243,5 +243,59 @@ describe('getUsersWithoutReservation', () => {
             ]),
             week: nextMonday,
         });
+    });
+});
+
+describe('computeWindowStatus', () => {
+    const setFakeTimeUY = (uyIsoString: string) => {
+        vi.setSystemTime(new Date(uyIsoString + '-03:00'));
+    };
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        // Mock default settings: deadline Thursday (4) at 23:59
+        prismaMock.settings.findUnique.mockResolvedValue({
+            id: 1,
+            deadlineDay: 4,
+            deadlineTime: '23:59',
+        } as any);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('jueves antes de deadlineTime => isReservationOpen true', async () => {
+        setFakeTimeUY('2026-04-30T12:00:00'); // Jueves 12:00
+        const status = await computeWindowStatus();
+        expect(status.isReservationOpen).toBe(true);
+    });
+
+    it('jueves después de deadlineTime => isReservationOpen false', async () => {
+        // Mock deadline to 15:00 to test same-day closure
+        prismaMock.settings.findUnique.mockResolvedValue({
+            id: 1,
+            deadlineDay: 4,
+            deadlineTime: '15:00',
+        } as any);
+        setFakeTimeUY('2026-04-30T16:00:00'); // Jueves 16:00
+        const status = await computeWindowStatus();
+        expect(status.isReservationOpen).toBe(false);
+    });
+
+    it('viernes => isReservationOpen false', async () => {
+        setFakeTimeUY('2026-05-01T12:00:00'); // Viernes
+        const status = await computeWindowStatus();
+        expect(status.isReservationOpen).toBe(false);
+    });
+
+    it('sábado/domingo => isReservationOpen true (semana inminente)', async () => {
+        setFakeTimeUY('2026-05-02T12:00:00'); // Sábado
+        const statusSat = await computeWindowStatus();
+        expect(statusSat.isReservationOpen).toBe(true);
+
+        setFakeTimeUY('2026-05-03T12:00:00'); // Domingo
+        const statusSun = await computeWindowStatus();
+        expect(statusSun.isReservationOpen).toBe(true);
     });
 });

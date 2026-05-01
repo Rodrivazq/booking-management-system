@@ -53,7 +53,7 @@ export default function DailyDetailReport({ reservations, users, date, slot }: D
                         <tr>
                             <th>Funcionario</th>
                             <th>Nombre</th>
-                            <th>Menu</th>
+                            <th>Menú</th>
                             <th>Postre</th>
                             <th>Pan</th>
                             <th>Check</th>
@@ -61,13 +61,13 @@ export default function DailyDetailReport({ reservations, users, date, slot }: D
                     </thead>
                     <tbody>
                         {filtered.map((item) => (
-                            <tr key={item.id}>
+                            <tr key={item.id} className="compact-row">
                                 <td>{item.funcNumber || item.user?.funcNumber || '-'}</td>
-                                <td>{item.name}</td>
-                                <td>{item.selection?.meal}</td>
-                                <td>{item.selection?.dessert}</td>
-                                <td>{item.selection?.bread ? 'SI' : 'NO'}</td>
-                                <td><div style={{ width: '20px', height: '20px', border: '1px solid black' }}></div></td>
+                                <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>{item.name}</td>
+                                <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{item.selection?.meal}</td>
+                                <td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>{item.selection?.dessert}</td>
+                                <td style={{ textAlign: 'center' }}>{item.selection?.bread ? 'SI' : '-'}</td>
+                                <td><div className="check-box" style={{ margin: '0 auto' }}></div></td>
                             </tr>
                         ))}
                         {filtered.length === 0 && (

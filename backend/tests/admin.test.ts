@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { changeUserRole } from '../src/controllers/admin.controller';
+import { changeUserRole, createUser } from '../src/controllers/admin.controller';
+
+vi.mock('../src/services/email.service', () => ({
+  sendAdminCreatedUserEmail: vi.fn().mockResolvedValue(true)
+}));
+
+import { sendAdminCreatedUserEmail } from '../src/services/email.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -148,5 +154,32 @@ describe('changeUserRole', () => {
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({ ok: true, user: expect.objectContaining({ role: 'superadmin' }) })
         );
+    });
+});
+
+describe('createUser', () => {
+    it('responde ok aunque falle email, incluyendo warning y emailSent:false', async () => {
+        const req = {
+            user: { id: 'admin-1', role: 'admin' },
+            body: {
+                name: 'New User', email: 'new@example.com', password: 'password123',
+                funcNumber: 'NEW001', documentId: '99999999'
+            }
+        } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+        prismaMock.user.findUnique.mockResolvedValue(null);
+        prismaMock.user.create.mockResolvedValue({ id: 'usr-new' } as any);
+
+        // Force email failure
+        vi.mocked(sendAdminCreatedUserEmail).mockResolvedValueOnce(false);
+
+        await createUser(req, res);
+
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            ok: true,
+            emailSent: false,
+            warning: expect.stringContaining('proveedor de correo no está configurado o falló')
+        }));
     });
 });

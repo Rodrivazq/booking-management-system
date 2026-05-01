@@ -4,6 +4,7 @@ import logger from '../utils/logger';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { SMTP, RESEND_API_KEY, FRONTEND_URL } from '../config/env';
+import { getNextMonday, getNowUY } from '../utils/dates';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
@@ -19,15 +20,7 @@ function createTransport() {
 
 const mailer = createTransport();
 
-const getNextMonday = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = (8 - day) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + diff);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday.toISOString().slice(0, 10);
-};
+// getNextMonday is now imported from utils
 
 export const startReminderCron = async () => {
     // Run daily at 10 AM
@@ -42,7 +35,7 @@ export const startReminderCron = async () => {
                 return;
             }
 
-            const today = new Date();
+            const today = getNowUY();
             const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
             
             // deadlineDay: 0 is Domingo, 1 is Lunes, etc.

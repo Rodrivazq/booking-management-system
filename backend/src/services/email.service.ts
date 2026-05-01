@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
-import { SMTP, RESEND_API_KEY, FRONTEND_URL } from '../config/env';
+import { SMTP, RESEND_API_KEY, FRONTEND_URL, NODE_ENV } from '../config/env';
 import logger from '../utils/logger';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
@@ -59,7 +59,7 @@ export const sendVerificationEmail = async (user: { name: string; email: string 
 
 export const sendPasswordResetEmail = async (user: { name: string; email: string }, resetUrl: string) => {
     const subject = 'Restablecer contraseña';
-    const text = `Ingresa a ${resetUrl} para definir una nueva contrasena. El enlace expira en 1 hora.`;
+    const text = `Ingresa a ${resetUrl} para definir una nueva contraseña. El enlace expira en 1 hora.`;
     const html = `
     <div style="${baseEmailStyles}">
         <div style="${baseCardStyles}">
@@ -140,6 +140,10 @@ async function sendEmail(to: string, subject: string, text: string, html: string
     }
 
     if (!resend && !mailer) {
+        if (NODE_ENV === 'production') {
+            logger.error(`[Email Service] CRITICAL ERROR: No email provider configured in PRODUCTION. Cannot send email to ${to}: ${subject}`);
+            return false;
+        }
         logger.warn(`[Email Service] No email provider configured. Simulated email to ${to}: ${subject}`);
         return true;
     }

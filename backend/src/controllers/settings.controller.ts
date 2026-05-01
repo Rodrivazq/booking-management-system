@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
+import { validateImageUrl } from '../utils/validators';
 
 const DEFAULT_SETTINGS = {
     companyName: 'Sistema de Reservas Corporativo',
@@ -30,6 +31,10 @@ export const getSettings = async (req: Request, res: Response) => {
 export const updateSettings = async (req: Request, res: Response) => {
     try {
         const newSettings = req.body;
+
+        if (newSettings.logoUrl !== undefined && !validateImageUrl(newSettings.logoUrl)) {
+            return res.status(400).json({ message: 'URL de logo inválida o demasiado larga. No se permiten imágenes base64.' });
+        }
 
         // Basic validation could go here
 

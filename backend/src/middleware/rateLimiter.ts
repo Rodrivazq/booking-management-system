@@ -11,7 +11,7 @@ export const loginLimiter = rateLimit({
 
 export const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 500, // Limit each IP to 500 requests per `window` (here, per 15 minutes)
+    limit: 5000, // Limit each IP to 5000 requests per `window` for corporate shared IP environments
     message: 'Demasiadas peticiones desde esta IP, por favor intenta más tarde.',
     standardHeaders: true,
     legacyHeaders: false,

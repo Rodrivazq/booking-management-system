@@ -63,8 +63,20 @@ describe('getMyRatings', () => {
 // ─── PUT / ───────────────────────────────────────────────────────────────────
 
 describe('upsertRating', () => {
+    const setFakeTimeUY = (uyIsoString: string) => {
+        vi.setSystemTime(new Date(uyIsoString + '-03:00'));
+    };
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('saves a valid rating for a reserved dish', async () => {
-        // lunes already passed (fakeRating date is in the past relative to 2025)
+        setFakeTimeUY('2025-01-07T12:00:00'); // Martes
         const req = {
             user: { id: 'usr-1' },
             body: { weekStart: WEEK, day: 'lunes', itemType: 'meal', itemName: 'Milanesa', rating: 'liked' },
@@ -81,6 +93,7 @@ describe('upsertRating', () => {
     });
 
     it('returns 403 if user has no reservation for that week', async () => {
+        setFakeTimeUY('2025-01-07T12:00:00');
         const req = {
             user: { id: 'usr-2' },
             body: { weekStart: WEEK, day: 'lunes', itemType: 'meal', itemName: 'Milanesa', rating: 'liked' },
@@ -98,6 +111,7 @@ describe('upsertRating', () => {
     });
 
     it('returns 403 if the dish was not in the reservation', async () => {
+        setFakeTimeUY('2025-01-07T12:00:00');
         const req = {
             user: { id: 'usr-1' },
             body: { weekStart: WEEK, day: 'lunes', itemType: 'meal', itemName: 'Asado', rating: 'liked' },
@@ -138,27 +152,41 @@ describe('upsertRating', () => {
         expect(res.status).toHaveBeenCalledWith(400);
     });
 
-    it('returns 403 for a future day (not yet passed)', async () => {
-        // Use a week far in the future
-        const futureWeek = '2099-01-06';
+    it('no permite calificar antes del día correspondiente', async () => {
+        // Lunes es 2025-01-06. Simulamos el domingo anterior.
+        setFakeTimeUY('2025-01-05T23:59:00');
         const req = {
             user: { id: 'usr-1' },
-            body: { weekStart: futureWeek, day: 'lunes', itemType: 'meal', itemName: 'Milanesa', rating: 'liked' },
+            body: { weekStart: WEEK, day: 'lunes', itemType: 'meal', itemName: 'Milanesa', rating: 'liked' },
         } as any;
         const res = makeRes();
 
-        const futureReservation = {
-            ...fakeReservation,
-            weekStart: futureWeek,
-        };
-        prismaMock.reservation.findUnique.mockResolvedValue(futureReservation as any);
+        prismaMock.reservation.findUnique.mockResolvedValue(fakeReservation as any);
 
         await upsertRating(req, res);
 
         expect(res.status).toHaveBeenCalledWith(403);
         expect(res.json).toHaveBeenCalledWith(
-            expect.objectContaining({ error: expect.stringMatching(/después del día/) })
+            expect.objectContaining({ error: expect.stringMatching(/a partir del día correspondiente/) })
         );
+    });
+
+    it('permite calificar el mismo día correspondiente a partir de las 00:00', async () => {
+        // Lunes es 2025-01-06. Simulamos el mismo lunes a las 00:01.
+        setFakeTimeUY('2025-01-06T00:01:00');
+        const req = {
+            user: { id: 'usr-1' },
+            body: { weekStart: WEEK, day: 'lunes', itemType: 'meal', itemName: 'Milanesa', rating: 'liked' },
+        } as any;
+        const res = makeRes();
+
+        prismaMock.reservation.findUnique.mockResolvedValue(fakeReservation as any);
+        prismaMock.dishRating.upsert.mockResolvedValue(fakeRating as any);
+
+        await upsertRating(req, res);
+
+        expect(prismaMock.dishRating.upsert).toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith(fakeRating);
     });
 });
 

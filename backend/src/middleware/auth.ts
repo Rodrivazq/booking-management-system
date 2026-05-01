@@ -7,9 +7,22 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.replace('Bearer ', '') : null;
     if (!token) return res.status(401).json({ error: 'No autorizado' });
+    
     try {
         const payload = jwt.verify(token, JWT_SECRET) as any;
-        req.user = payload;
+        
+        // Fetch real-time user data from DB to prevent privilege persistence
+        const user = await prisma.user.findUnique({
+            where: { id: payload.id },
+            select: { id: true, name: true, email: true, role: true, funcNumber: true }
+        });
+
+        if (!user) {
+            return res.status(401).json({ error: 'Usuario no encontrado o sesión inválida' });
+        }
+
+        // Rebuild req.user with current DB data, ignoring JWT role
+        req.user = user as any;
 
         try {
             const settings = await prisma.settings.findFirst();

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../utils/prisma';
 import { sendAdminCreatedUserEmail } from '../services/email.service';
+import { validateImageUrl } from '../utils/validators';
 
 export const updateUserDetails = async (req: Request, res: Response) => {
     const { userId } = req.params;
@@ -64,6 +65,10 @@ export const createUser = async (req: Request, res: Response) => {
 
     if (!name || !email || !password || !funcNumber || !documentId) return res.status(400).json({ error: 'Faltan datos obligatorios (nombre, email, contraseña, nro. funcionario, documento)' });
 
+    if (photoUrl !== undefined && !validateImageUrl(photoUrl)) {
+        return res.status(400).json({ error: 'URL de imagen inválida o demasiado larga. No se permiten imágenes base64.' });
+    }
+
     // Role validation
     if (role === 'superadmin' && creatorRole !== 'superadmin') {
         return res.status(403).json({ error: 'Solo Super Admins pueden crear otros Super Admins' });
@@ -101,9 +106,14 @@ export const createUser = async (req: Request, res: Response) => {
         });
 
         // Send a welcome email explaining they can use "forgot password" to set one if needed
-        await sendAdminCreatedUserEmail(newUser);
+        const emailSent = await sendAdminCreatedUserEmail(newUser);
 
-        res.json({ ok: true, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, funcNumber: newUser.funcNumber, documentId: newUser.documentId } });
+        res.json({ 
+            ok: true, 
+            emailSent,
+            warning: !emailSent ? 'El usuario fue creado, pero el proveedor de correo no está configurado o falló. Por favor, infórmale sus credenciales manualmente.' : undefined,
+            user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, funcNumber: newUser.funcNumber, documentId: newUser.documentId } 
+        });
     } catch (error) {
         console.error('Create user error:', error);
         res.status(500).json({ error: 'Error al crear usuario' });

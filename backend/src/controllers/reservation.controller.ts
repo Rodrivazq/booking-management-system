@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { DAY_KEYS, TIME_SLOTS } from '../utils/db';
-import { getNextMonday, getCurrentMonday } from '../utils/dates';
+import { getNextMonday, getCurrentMonday, getNowUY } from '../utils/dates';
 
 // ---------------------------------------------------------------------------
 // Helper: compute the reservation window status from DB settings.
@@ -12,7 +12,7 @@ export async function computeWindowStatus() {
     const deadlineDay = settings?.deadlineDay ?? 4;    // 0=Sun … 6=Sat, default Thu
     const deadlineTime = settings?.deadlineTime ?? '23:59';
 
-    const now = new Date();
+    const now = getNowUY();
     const dayOfWeek = now.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 

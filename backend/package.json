@@ -8,7 +8,9 @@
     "build": "npx prisma generate && tsc",
     "start": "npx prisma migrate deploy && node dist/index.js",
     "postinstall": "npx prisma generate",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:superadmin": "ts-node src/scripts/create-superadmin.ts",
+    "ops:check": "ts-node src/scripts/ops-check.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

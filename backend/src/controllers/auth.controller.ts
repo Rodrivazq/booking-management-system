@@ -8,12 +8,17 @@ import { verifyTurnstileToken } from '../utils/turnstile';
 import { JWT_SECRET, FRONTEND_URL, TURNSTILE_SECRET_KEY } from '../config/env';
 import { getNextMonday } from '../utils/dates';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email.service';
+import { validateImageUrl } from '../utils/validators';
 
 
 export const register = async (req: Request, res: Response) => {
     const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl, turnstileToken } = req.body || {};
     if (!name || !email || !password || !funcNumber || !documentId || !photoUrl) {
         return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
+    }
+
+    if (!validateImageUrl(photoUrl)) {
+        return res.status(400).json({ error: 'URL de imagen inválida o demasiado larga. No se permiten imágenes base64.' });
     }
 
     if (TURNSTILE_SECRET_KEY && !turnstileToken) {
@@ -69,7 +74,14 @@ export const register = async (req: Request, res: Response) => {
 
         const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
-        await sendVerificationEmail(user, verifyUrl);
+        const emailSent = await sendVerificationEmail(user, verifyUrl);
+
+        if (!emailSent) {
+            return res.status(201).json({ 
+                message: 'Registro exitoso, pero ocurrió un problema técnico al enviar el correo de verificación. Por favor, contacta a un administrador para que active tu cuenta.',
+                warning: true 
+            });
+        }
 
         res.status(201).json({ message: 'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de ingresar.' });
     } catch (error) {
@@ -192,7 +204,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
         const resetUrl = `${FRONTEND_URL}/reset?token=${token}`;
 
-        await sendPasswordResetEmail(user, resetUrl);
+        const emailSent = await sendPasswordResetEmail(user, resetUrl);
+
+        if (!emailSent) {
+            logger.error(`Failed to send password reset email to ${user.email}`);
+        }
 
         res.json({ ok: true, message: 'Si el correo existe, recibirás un enlace para restablecer tu contraseña.' });
     } catch (error) {
@@ -252,6 +268,10 @@ export const me = async (req: Request, res: Response) => {
 export const updateProfile = async (req: Request, res: Response) => {
     const { name, phoneNumber, photoUrl, currentPassword, newPassword, preferences } = req.body || {};
     const userId = req.user.id;
+
+    if (photoUrl !== undefined && !validateImageUrl(photoUrl)) {
+        return res.status(400).json({ error: 'URL de imagen inválida o demasiado larga. No se permiten imágenes base64.' });
+    }
 
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });

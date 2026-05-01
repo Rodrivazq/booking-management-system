@@ -9,6 +9,14 @@ vi.mock('bcryptjs', () => ({
   }
 }));
 
+vi.mock('../src/services/email.service', () => ({
+  sendVerificationEmail: vi.fn().mockResolvedValue(true),
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(true)
+}));
+
+import { sendVerificationEmail, sendPasswordResetEmail } from '../src/services/email.service';
+import { forgotPassword } from '../src/controllers/auth.controller';
+
 describe('Auth Controller (Unit Tests)', () => {
   it('should register a new user successfully', async () => {
     const req = {
@@ -18,7 +26,7 @@ describe('Auth Controller (Unit Tests)', () => {
         password: 'password123',
         funcNumber: 'TEST001',
         documentId: '12345678',
-        photoUrl: 'http://'
+        photoUrl: 'https://example.com/photo.jpg'
       }
     } as any;
     const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
@@ -33,7 +41,7 @@ describe('Auth Controller (Unit Tests)', () => {
       funcNumber: 'TEST001',
       documentId: '12345678',
       phoneNumber: null,
-      photoUrl: 'http://',
+      photoUrl: 'https://example.com/photo.jpg',
       isEmailVerified: true,
       verificationToken: null,
       preferences: null,
@@ -47,6 +55,45 @@ describe('Auth Controller (Unit Tests)', () => {
     expect(prismaMock.user.create).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Registro exitoso') }));
+  });
+
+  it('rejects registration with base64 image', async () => {
+    const req = {
+      body: {
+        name: 'Test User', email: 'base64@example.com', password: 'password123',
+        funcNumber: 'BASE001', documentId: '11111111', photoUrl: 'data:image/png;base64,iVBORw0KGgo...'
+      }
+    } as any;
+    const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+    await register(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringMatching(/base64/) }));
+  });
+
+  it('register informa error si no se pudo mandar email de verificación', async () => {
+    const req = {
+      body: {
+        name: 'Test Fail Email', email: 'fail@example.com', password: 'password123',
+        funcNumber: 'FAIL001', documentId: '87654321', photoUrl: 'https://example.com/photo.jpg'
+      }
+    } as any;
+    const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'usr-fail' } as any);
+
+    // Force email failure
+    vi.mocked(sendVerificationEmail).mockResolvedValueOnce(false);
+
+    await register(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ 
+        message: expect.stringContaining('problema técnico'),
+        warning: true
+    }));
   });
 
   it('should login with valid credentials', async () => {
@@ -78,5 +125,24 @@ describe('Auth Controller (Unit Tests)', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringMatching(/invalidas|inválidas/i) }));
+  });
+
+  it('forgot password mantiene respuesta neutral aunque falle email', async () => {
+    const req = { body: { email: 'reset@example.com' } } as any;
+    const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'usr-reset', email: 'reset@example.com' } as any);
+    prismaMock.passwordReset.create.mockResolvedValue({} as any);
+
+    // Force email failure
+    vi.mocked(sendPasswordResetEmail).mockResolvedValueOnce(false);
+
+    await forgotPassword(req, res);
+
+    // Verify it still responds 200 ok
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ 
+        ok: true,
+        message: expect.stringContaining('Si el correo existe')
+    }));
   });
 });

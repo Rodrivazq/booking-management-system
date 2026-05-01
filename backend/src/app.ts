@@ -19,6 +19,9 @@ import { errorHandler } from './middleware/errorHandler';
 
 import morgan from 'morgan';
 import logger, { stream } from './utils/logger';
+import prisma from './utils/prisma';
+import { NODE_ENV, TZ } from './config/env';
+import { getNextMonday } from './utils/dates';
 
 const app = express();
 
@@ -28,8 +31,6 @@ const app = express();
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms', { stream }));
 
 app.use(helmet());
-app.use('/api/', globalLimiter);
-
 // -----------------------------
 // CORS PRO (dominio final + localhost + previews de Vercel)
 // -----------------------------
@@ -73,10 +74,63 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // -----------------------------
+// HEALTH CHECK
+// -----------------------------
+
+app.get('/api/health', (_req, res) => {
+  res.json({ 
+    ok: true, 
+    service: 'reservas-api',
+    env: NODE_ENV,
+    timezone: TZ,
+    timestamp: new Date().toISOString(),
+    nextMonday: getNextMonday() 
+  });
+});
+
+app.get('/api/ready', async (_req, res) => {
+  try {
+    // Simple query to verify database connection
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({
+      ok: true,
+      database: 'ok',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    logger.error('[Readiness Check] Database connectivity failed', { reason: 'prisma_query_failed' });
+    res.status(503).json({
+      ok: false,
+      database: 'error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/', (_req, res) => {
+  logger.info("Health check ping recibido en /");
+  res.send('Backend API Running');
+});
+
+// -----------------------------
+// LIMITER
+// -----------------------------
+app.use('/api/', globalLimiter);
+
+// -----------------------------
+// CACHE CONTROL
+// -----------------------------
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  next();
+});
+
+// -----------------------------
 // MIDDLEWARES
 // -----------------------------
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // -----------------------------
@@ -92,26 +146,6 @@ app.use('/api/qr', qrRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ratings', ratingsRoutes);
-
-// -----------------------------
-// HEALTH CHECK
-// -----------------------------
-
-app.get('/api/health', (_req, res) => {
-  const today = new Date();
-  const day = today.getDay();
-  const diff = (8 - day) % 7 || 7;
-  const nextMonday = new Date(today);
-  nextMonday.setDate(today.getDate() + diff);
-  nextMonday.setHours(0, 0, 0, 0);
-
-  res.json({ ok: true, nextMonday: nextMonday.toISOString().slice(0, 10) });
-});
-
-app.get('/', (_req, res) => {
-  logger.info("Health check ping recibido en /");
-  res.send('Backend API Running');
-});
 
 // -----------------------------
 // MANEJO DE ERRORES GLOBAL

@@ -60,22 +60,33 @@ export default function PrintPage() {
             <style>{`
                 @media print {
                     @page { margin: 0.5cm; }
-                    body { margin: 0; padding: 0; font-family: sans-serif; background: white !important; color: black !important; }
+                    body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: white !important; color: black !important; font-size: 10px; line-height: 1.1; }
                     * { color: black !important; }
-                    .print-container { width: 100%; }
-                    .print-table { width: 100%; border-collapse: collapse; font-size: 12px; color: black; }
-                    .print-table th, .print-table td { border: 1px solid #ccc; padding: 4px; text-align: left; color: black; }
-                    .print-table th { background: #eee !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    h1 { font-size: 18px; margin-bottom: 5px; color: black; }
-                    h3 { font-size: 14px; margin-bottom: 10px; color: #666; }
+                    .print-container { width: 100%; margin-bottom: 15px; page-break-inside: avoid; }
+                    .print-table { width: 100%; border-collapse: collapse; font-size: 10px; color: black; }
+                    .print-table th, .print-table td { border: 1px solid #999; padding: 3px 4px; text-align: left; color: black; }
+                    .print-table th { background: #eee !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; }
+                    h1 { font-size: 13px; margin: 0 0 3px 0; color: black; text-transform: uppercase; }
+                    h3 { font-size: 11px; margin: 0 0 8px 0; color: #444; }
+                    .print-break { page-break-before: always; }
+                    tr { page-break-inside: avoid; }
+                    thead { display: table-header-group; }
+                    
+                    /* Utility to save vertical space */
+                    .compact-row td { padding: 2px 4px; }
+                    .check-box { width: 10px; height: 10px; border: 1px solid black; }
                 }
                 /* Screen styles for preview */
                 .print-page { padding: 20px; background: white; min-height: 100vh; color: black; }
                 .print-page * { color: black; }
-                .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; color: black; }
-                .print-table th, .print-table td { border: 1px solid #ddd; padding: 8px; color: black; }
+                .print-container { margin-bottom: 20px; }
+                .print-table { width: 100%; border-collapse: collapse; margin-top: 5px; color: black; font-size: 12px; }
+                .print-table th, .print-table td { border: 1px solid #ccc; padding: 6px; color: black; }
                 .print-table th { background: #f5f5f5; color: black; }
                 .print-break { page-break-before: always; }
+                .check-box { width: 14px; height: 14px; border: 1px solid black; }
+                h1 { font-size: 18px; margin: 0 0 5px 0; }
+                h3 { font-size: 14px; margin: 0 0 10px 0; color: #666; }
             `}</style>
 
             {
@@ -114,17 +125,21 @@ export default function PrintPage() {
                                     .map(r => r.timeSlot)
                             )).sort();
 
+                            if (daySlots.length === 0) return null; // No print break if no data
+
                             return (
                                 <div key={day}>
+                                    {/* Only break page between days, not between time slots */}
                                     <div className="print-break"></div>
                                     <DailyDetailReport reservations={reservations} users={users} date={dateStr} />
 
-                                    {daySlots.map(s => (
-                                        <div key={s}>
-                                            <div className="print-break"></div>
-                                            <DailyDetailReport reservations={reservations} users={users} date={dateStr} slot={s} />
-                                        </div>
-                                    ))}
+                                    <div style={{ marginTop: '15px' }}>
+                                        {daySlots.map(s => (
+                                            <div key={s} style={{ marginBottom: '15px' }}>
+                                                <DailyDetailReport reservations={reservations} users={users} date={dateStr} slot={s} />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             );
                         })}
@@ -132,7 +147,7 @@ export default function PrintPage() {
                 )
             }
 
-            {!type && <div>Parametros invalidos</div>}
+            {!type && <div>Parámetros inválidos</div>}
         </div >
     );
 }
