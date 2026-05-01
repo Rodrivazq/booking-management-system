@@ -36,3 +36,9 @@ Thumbs.db
 .idea/
 *.sln
 .cursorrules
+
+# --- 8. Backups & Database Dumps ---
+backups/
+*.dump
+*.sql
+*.backup
