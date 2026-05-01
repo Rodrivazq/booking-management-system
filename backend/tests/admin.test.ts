@@ -290,3 +290,127 @@ describe('updateUserDetails', () => {
         expect(prismaMock.user.update).not.toHaveBeenCalled();
     });
 });
+
+describe('previewUsersImport', () => {
+    it('returns error if payload is not an array', async () => {
+        const { previewUsersImport } = await import('../src/controllers/admin.controller');
+        const req = { body: { users: 'not an array' } } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+        await previewUsersImport(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('array') }));
+    });
+
+    it('identifies missing fields and internal duplicates', async () => {
+        const { previewUsersImport } = await import('../src/controllers/admin.controller');
+        const req = {
+            body: {
+                users: [
+                    { name: 'John', email: 'john@test.com', funcNumber: 'F01', documentId: 'D01' },
+                    { name: 'Missing', email: 'john@test.com' }, // duplicate email, missing func and doc
+                ]
+            }
+        } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+        prismaMock.user.findMany.mockResolvedValue([]);
+
+        await previewUsersImport(req, res);
+
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            ok: true,
+            summary: expect.objectContaining({ totalReceived: 2, validCount: 1, errorCount: 1 }),
+        }));
+
+        const responseData = res.json.mock.calls[0][0];
+        expect(responseData.validRows).toHaveLength(1);
+        expect(responseData.errors).toHaveLength(1);
+        expect(responseData.errors[0].reasons.some((r: string) => r.includes('Faltan campos'))).toBe(true);
+        expect(responseData.errors[0].reasons.some((r: string) => r.includes('Email duplicado en el mismo archivo'))).toBe(true);
+    });
+
+    it('identifies duplicates against the database', async () => {
+        const { previewUsersImport } = await import('../src/controllers/admin.controller');
+        const req = {
+            body: {
+                users: [
+                    { name: 'Jane', email: 'jane@db.com', funcNumber: 'F02', documentId: 'D02' }
+                ]
+            }
+        } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+        // Mock that jane@db.com exists
+        prismaMock.user.findMany
+            .mockResolvedValueOnce([{ email: 'jane@db.com' }] as any) // email check
+            .mockResolvedValueOnce([]) // funcNumber check
+            .mockResolvedValueOnce([]); // documentId check
+
+        await previewUsersImport(req, res);
+
+        const responseData = res.json.mock.calls[0][0];
+        expect(responseData.validRows).toHaveLength(0);
+        expect(responseData.errors).toHaveLength(1);
+        expect(responseData.errors[0].reasons.some((r: string) => r.includes('Email ya existe en el sistema'))).toBe(true);
+    });
+
+    it('does not echo unexpected sensitive fields in invalid row data', async () => {
+        const { previewUsersImport } = await import('../src/controllers/admin.controller');
+        const req = {
+            body: {
+                users: [
+                    {
+                        name: 'Unsafe',
+                        email: 'bad-email',
+                        funcNumber: 'F03',
+                        documentId: 'D03',
+                        password: 'plain-password',
+                        token: 'secret-token',
+                        photoUrl: 'data:image/png;base64,huge',
+                    }
+                ]
+            }
+        } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+        prismaMock.user.findMany.mockResolvedValue([]);
+
+        await previewUsersImport(req, res);
+
+        const responseData = res.json.mock.calls[0][0];
+        expect(responseData.errors).toHaveLength(1);
+        expect(responseData.errors[0].data).toEqual({
+            name: 'Unsafe',
+            email: 'bad-email',
+            funcNumber: 'F03',
+            documentId: 'D03',
+            phoneNumber: null,
+            role: 'user',
+        });
+        expect(responseData.errors[0].data.password).toBeUndefined();
+        expect(responseData.errors[0].data.token).toBeUndefined();
+        expect(responseData.errors[0].data.photoUrl).toBeUndefined();
+    });
+
+    it('rejects oversized import previews', async () => {
+        const { previewUsersImport } = await import('../src/controllers/admin.controller');
+        const req = {
+            body: {
+                users: Array.from({ length: 501 }, (_, index) => ({
+                    name: `User ${index}`,
+                    email: `user${index}@test.com`,
+                    funcNumber: `F${index}`,
+                    documentId: `D${index}`,
+                }))
+            }
+        } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+        await previewUsersImport(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(prismaMock.user.findMany).not.toHaveBeenCalled();
+    });
+});

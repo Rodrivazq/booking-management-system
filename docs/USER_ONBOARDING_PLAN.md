@@ -64,19 +64,24 @@ Recomendada solo si la empresa acepta que cada funcionario se registre.
 - Si el correo cae en spam, se frena el alta.
 - Puede haber menos control sobre el padrón real.
 
-### Opción C: Carga CSV Controlada
+### Opción C: Carga CSV Controlada (Fase de Validación)
 
-No existe todavía como feature productiva. Se recomienda implementarla más adelante si el cliente necesita altas masivas recurrentes.
+Se ha implementado el endpoint `POST /api/admin/users/preview-csv` protegido por SuperAdmin.
+Esta es la estrategia técnica recomendada para la carga de 200 usuarios, desarrollada en fases para garantizar la seguridad.
 
-La carga CSV futura debería:
+**Fase 1 (Actual): Validación Segura**
+El endpoint actual **NO CREA** usuarios en la base de datos ni envía correos. Solo recibe un payload JSON (ej. proveniente de la lectura de un CSV en el frontend) y devuelve un análisis detallado:
+- Filas válidas que pasarían la validación.
+- Filas con errores (campos faltantes o roles inválidos).
+- Duplicados internos dentro del mismo archivo.
+- Duplicados contra la base de datos (por email, documento o número de funcionario).
 
-- Ser accesible solo para SuperAdmin.
-- Validar todas las filas antes de escribir.
-- Mostrar errores por fila.
-- Ser transaccional o permitir confirmar solo filas válidas.
-- No crear usuarios duplicados.
-- No guardar contraseñas en texto plano.
-- No ejecutarse automáticamente al deploy.
+**Fase 2 (Próxima): Inserción Transaccional**
+Una vez que el frontend integre la pantalla de preview usando el endpoint anterior, se habilitará un endpoint definitivo de importación masiva que solo insertará los registros válidos.
+
+**Ventajas de la estrategia:**
+- Riesgo cero de corromper producción o generar emails masivos erróneos.
+- El administrador puede corregir su archivo Excel/CSV viendo exactamente qué líneas fallan antes de impactar el sistema.
 
 ## 3. Reglas De Limpieza De Datos
 
@@ -187,4 +192,4 @@ Para el primer lanzamiento:
 
 1. Cargar usuarios reales por panel admin en tandas si el padrón ya está definido.
 2. Usar autogestión solo si la empresa acepta que cada funcionario complete sus datos.
-3. Implementar importación CSV en un batch futuro si la operación va a repetirse para otras empresas o muchas altas mensuales.
+3. Para operaciones masivas (200+ usuarios), avanzar con la integración de la pantalla Frontend para el endpoint de validación CSV ya existente (`preview-csv`), lo que permitirá importar el padrón completo sin errores ni fricción operativa.

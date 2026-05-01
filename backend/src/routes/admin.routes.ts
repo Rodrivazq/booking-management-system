@@ -7,5 +7,6 @@ const router = express.Router();
 router.put('/users/:userId/details', authMiddleware, requireAdmin, adminController.updateUserDetails);
 router.put('/users/:userId/role', authMiddleware, requireSuperAdmin, adminController.changeUserRole);
 router.post('/users', authMiddleware, requireAdmin, adminController.createUser);
+router.post('/users/preview-csv', authMiddleware, requireSuperAdmin, adminController.previewUsersImport);
 
 export default router;

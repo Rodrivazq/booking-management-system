@@ -167,3 +167,132 @@ export const changeUserRole = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error al cambiar el rol del usuario' });
     }
 };
+
+export const previewUsersImport = async (req: Request, res: Response) => {
+    try {
+        const { users } = req.body || {};
+
+        if (!Array.isArray(users)) {
+            return res.status(400).json({ error: 'El payload debe contener un array "users"' });
+        }
+
+        if (users.length > 500) {
+            return res.status(400).json({ error: 'La validación admite hasta 500 usuarios por archivo.' });
+        }
+
+        const validRows: any[] = [];
+        const errors: any[] = [];
+        const duplicateEmails: string[] = [];
+        const duplicateFuncs: string[] = [];
+        const duplicateDocs: string[] = [];
+
+        // Extract all values to check against DB in bulk
+        const emailsToCheck = users.map(u => String(u?.email || '').trim().toLowerCase()).filter(Boolean);
+        const funcsToCheck = users.map(u => String(u?.funcNumber || '').replace(/\s+/g, '').toUpperCase()).filter(Boolean);
+        const docsToCheck = users.map(u => String(u?.documentId || '').trim()).filter(Boolean);
+
+        // Fetch existing records
+        const [existingEmails, existingFuncs, existingDocs] = await Promise.all([
+            prisma.user.findMany({ where: { email: { in: emailsToCheck } }, select: { email: true } }),
+            prisma.user.findMany({ where: { funcNumber: { in: funcsToCheck } }, select: { funcNumber: true } }),
+            prisma.user.findMany({ where: { documentId: { in: docsToCheck } }, select: { documentId: true } })
+        ]);
+
+        const dbEmails = new Set(existingEmails.map(u => u.email));
+        const dbFuncs = new Set(existingFuncs.map(u => u.funcNumber));
+        const dbDocs = new Set(existingDocs.map(u => u.documentId));
+
+        // Track internal duplicates within the CSV
+        const seenEmails = new Set<string>();
+        const seenFuncs = new Set<string>();
+        const seenDocs = new Set<string>();
+
+        users.forEach((user, index) => {
+            const rowNum = index + 1;
+            const rowErrors: string[] = [];
+
+            const { name, email, funcNumber, documentId, phoneNumber, role } = user || {};
+            const normalizedName = String(name || '').trim();
+            const normalizedEmail = String(email || '').trim().toLowerCase();
+            const normalizedFunc = String(funcNumber || '').replace(/\s+/g, '').toUpperCase();
+            const normalizedDoc = String(documentId || '').trim();
+            const normalizedPhone = phoneNumber ? String(phoneNumber).trim() : null;
+            const normalizedRole = role ? String(role).trim().toLowerCase() : 'user';
+            const safeRow = {
+                name: normalizedName,
+                email: normalizedEmail,
+                funcNumber: normalizedFunc,
+                documentId: normalizedDoc,
+                phoneNumber: normalizedPhone,
+                role: normalizedRole,
+            };
+
+            if (!normalizedName || !normalizedEmail || !normalizedFunc || !normalizedDoc) {
+                rowErrors.push('Faltan campos obligatorios (nombre, email, funcNumber, documentId).');
+            }
+
+            if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+                rowErrors.push(`Email inválido: ${normalizedEmail}`);
+            }
+
+            // 1. Check duplicates against DB
+            if (normalizedEmail && dbEmails.has(normalizedEmail)) {
+                rowErrors.push(`Email ya existe en el sistema: ${normalizedEmail}`);
+                if (!duplicateEmails.includes(normalizedEmail)) duplicateEmails.push(normalizedEmail);
+            }
+            if (normalizedFunc && dbFuncs.has(normalizedFunc)) {
+                rowErrors.push(`Número de funcionario ya existe: ${normalizedFunc}`);
+                if (!duplicateFuncs.includes(normalizedFunc)) duplicateFuncs.push(normalizedFunc);
+            }
+            if (normalizedDoc && dbDocs.has(normalizedDoc)) {
+                rowErrors.push(`Documento ya existe: ${normalizedDoc}`);
+                if (!duplicateDocs.includes(normalizedDoc)) duplicateDocs.push(normalizedDoc);
+            }
+
+            // 2. Check internal duplicates in the payload
+            if (normalizedEmail && seenEmails.has(normalizedEmail)) {
+                rowErrors.push(`Email duplicado en el mismo archivo: ${normalizedEmail}`);
+            }
+            if (normalizedFunc && seenFuncs.has(normalizedFunc)) {
+                rowErrors.push(`Número de funcionario duplicado en el mismo archivo: ${normalizedFunc}`);
+            }
+            if (normalizedDoc && seenDocs.has(normalizedDoc)) {
+                rowErrors.push(`Documento duplicado en el mismo archivo: ${normalizedDoc}`);
+            }
+
+            seenEmails.add(normalizedEmail);
+            seenFuncs.add(normalizedFunc);
+            seenDocs.add(normalizedDoc);
+
+            // Role validation
+            if (!['user', 'admin'].includes(normalizedRole)) {
+                rowErrors.push('Rol inválido (solo user o admin para importación).');
+            }
+
+            if (rowErrors.length > 0) {
+                errors.push({ row: rowNum, data: safeRow, reasons: rowErrors });
+            } else {
+                validRows.push(safeRow);
+            }
+        });
+
+        res.json({
+            ok: true,
+            summary: {
+                totalReceived: users.length,
+                validCount: validRows.length,
+                errorCount: errors.length
+            },
+            validRows,
+            errors,
+            duplicates: {
+                emails: duplicateEmails,
+                funcs: duplicateFuncs,
+                docs: duplicateDocs
+            }
+        });
+    } catch (error) {
+        console.error('Error previewing users import:', error);
+        res.status(500).json({ error: 'Error al validar la importación de usuarios' });
+    }
+};
