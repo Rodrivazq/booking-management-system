@@ -8,6 +8,7 @@ import { useAuthStore } from '../hooks/useAuthStore'
 import Skeleton from '../components/Skeleton'
 import { useToast } from '../context/ToastContext'
 import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarUploader'
+import CsvPreviewPanel from '../components/CsvPreviewPanel'
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 type UserRole = User['role']
@@ -626,6 +627,10 @@ export default function AdminDashboard() {
                                     </button>
                                 </div>
                             </div>
+
+                            {currentUser?.role === 'superadmin' && (
+                                <CsvPreviewPanel />
+                            )}
 
                             {showCreateUser && (
                                 <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'var(--bg)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
