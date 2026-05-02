@@ -110,16 +110,20 @@ export const sendAdminCreatedUserEmail = async (user: { name: string; email: str
 async function sendEmail(to: string, subject: string, text: string, html: string) {
     if (resend) {
         try {
-            await resend.emails.send({
+            const { data, error } = await resend.emails.send({
                 from: 'App de Reservas <no-reply@reservasrealsabor.com.uy>',
                 to: [to],
                 subject,
                 html
             });
-            logger.info(`[Email Service] Sent email via Resend to ${to}: ${subject}`);
-            return true;
+            if (error) {
+                logger.error(`[Email Service] Resend error for ${to} (${subject}):`, error);
+            } else {
+                logger.info(`[Email Service] Sent email via Resend to ${to} (${subject}). id=${data?.id}`);
+                return true;
+            }
         } catch (error) {
-            logger.error(`[Email Service] Resend error for ${to}:`, error);
+            logger.error(`[Email Service] Resend error for ${to} (${subject}):`, error);
         }
     }
 
@@ -135,7 +139,7 @@ async function sendEmail(to: string, subject: string, text: string, html: string
             logger.info(`[Email Service] Sent email via SMTP to ${to}: ${subject}`);
             return true;
         } catch (err) {
-            logger.error(`[Email Service] SMTP error for ${to}:`, err);
+            logger.error(`[Email Service] SMTP error for ${to} (${subject}):`, err);
         }
     }
 
