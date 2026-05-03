@@ -57,6 +57,27 @@ describe('Auth Controller (Unit Tests)', () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Registro exitoso') }));
   });
 
+  it('registers a new user successfully without photoUrl (photo feature disabled)', async () => {
+    const req = {
+      body: {
+        name: 'No Photo User',
+        email: 'nophoto@example.com',
+        password: 'password123',
+        funcNumber: 'NOPHOTO001',
+        documentId: '22222222'
+      }
+    } as any;
+    const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'usr-nophoto' } as any);
+
+    await register(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Registro exitoso') }));
+  });
+
   it('rejects registration with base64 image', async () => {
     const req = {
       body: {

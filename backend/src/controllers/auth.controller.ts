@@ -13,7 +13,7 @@ import { validateImageUrl } from '../utils/validators';
 
 export const register = async (req: Request, res: Response) => {
     const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl, turnstileToken } = req.body || {};
-    if (!name || !email || !password || !funcNumber || !documentId || !photoUrl) {
+    if (!name || !email || !password || !funcNumber || !documentId) {
         return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
     }
 
