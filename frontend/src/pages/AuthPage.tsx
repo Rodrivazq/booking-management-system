@@ -61,10 +61,6 @@ export default function AuthPage() {
                 throw new Error('Las contraseñas no coinciden')
             }
 
-            if (!isLogin && !formData.photoUrl) {
-                throw new Error('Debes subir una foto de perfil obligatoriamente para registrarte')
-            }
-            
             if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken) {
                  throw new Error('Por favor, completa la verificación anti-bot de Cloudflare')
             }
@@ -200,8 +196,8 @@ export default function AuthPage() {
                     ) : (
                         <>
                             <div style={{ paddingBottom: '1rem', textAlign: 'center' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil (Obligatoria)</label>
-                                <AvatarUploader 
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil</label>
+                                <AvatarUploader
                                     ref={avatarRef}
                                     currentPhotoUrl={formData.photoUrl}
                                     onPhotoChange={(url) => {
@@ -211,6 +207,9 @@ export default function AuthPage() {
                                     nameForInitials={formData.name || 'U'}
                                     size="100px"
                                 />
+                                <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                    Tu cuenta usará las iniciales de tu nombre como avatar.
+                                </p>
                             </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre Completo</label>
@@ -363,25 +362,6 @@ export default function AuthPage() {
                     {error && (
                         <div className="badge" style={{ background: '#fee2e2', color: '#991b1b', width: '100%', justifyContent: 'center', padding: '0.75rem', marginBottom: '1rem', whiteSpace: 'normal', display: 'block', textAlign: 'center' }}>
                             {error}
-                        </div>
-                    )}
-
-                    {!isLogin && formData.photoUrl && !error && (
-                        <div className="badge animate-fade-in" style={{ background: '#dcfce7', color: '#166534', width: '100%', justifyContent: 'center', padding: '0.75rem', marginBottom: '1rem', whiteSpace: 'normal', display: 'block', textAlign: 'center' }}>
-                            ✅ Foto subida exitosamente. Ya puedes crear tu cuenta.
-                        </div>
-                    )}
-
-                    {!isLogin && (
-                        <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
-                            <button 
-                                type="button" 
-                                className="btn btn-sm btn-secondary" 
-                                onClick={() => avatarRef.current?.openPicker()}
-                                style={{ fontSize: '0.95rem', width: '100%', padding: '0.75rem', fontWeight: 600, border: '2px dashed var(--accent)', color: 'var(--accent)', background: 'transparent' }}
-                            >
-                                📸 Cargar Foto de Perfil
-                            </button>
                         </div>
                     )}
 
