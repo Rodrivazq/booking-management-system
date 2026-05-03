@@ -124,6 +124,54 @@ export async function upsertRating(req: Request, res: Response) {
     }
 }
 
+// ─── GET /api/ratings/admin/global ────────────────────────────────────────────
+// Admin: aggregated ratings per dish across ALL weeks. Useful for the menu
+// committee to identify dishes that consistently rank high or low regardless
+// of when they were served. Aggregates by itemName + itemType (no day or week).
+export async function getGlobalAdminRatings(_req: Request, res: Response) {
+    try {
+        const ratings = await prisma.dishRating.findMany({
+            select: { itemName: true, itemType: true, rating: true },
+        });
+
+        const map = new Map<string, { itemName: string; itemType: string; liked: number; neutral: number; disliked: number }>();
+
+        for (const r of ratings) {
+            const key = `${r.itemType}::${r.itemName}`;
+            if (!map.has(key)) {
+                map.set(key, { itemName: r.itemName, itemType: r.itemType, liked: 0, neutral: 0, disliked: 0 });
+            }
+            const entry = map.get(key)!;
+            if (r.rating === 'liked') entry.liked++;
+            else if (r.rating === 'neutral') entry.neutral++;
+            else if (r.rating === 'disliked') entry.disliked++;
+        }
+
+        const result = Array.from(map.values()).map(entry => {
+            const total = entry.liked + entry.neutral + entry.disliked;
+            return {
+                ...entry,
+                total,
+                positivePercent: total > 0 ? Math.round((entry.liked / total) * 100) : 0,
+            };
+        });
+
+        // Sort: meals first, then desserts; within each group sort by positivePercent desc.
+        // Items without ratings (total=0) go to the end.
+        result.sort((a, b) => {
+            if (a.itemType !== b.itemType) return a.itemType === 'meal' ? -1 : 1;
+            if (a.total === 0 && b.total > 0) return 1;
+            if (b.total === 0 && a.total > 0) return -1;
+            return b.positivePercent - a.positivePercent;
+        });
+
+        return res.json(result);
+    } catch (e) {
+        console.error('[getGlobalAdminRatings]', e);
+        return res.status(500).json({ error: 'Error al obtener reporte global de calificaciones' });
+    }
+}
+
 // ─── GET /api/ratings/admin?week=YYYY-MM-DD ───────────────────────────────────
 // Admin: aggregated ratings per dish for a given week.
 export async function getAdminRatings(req: Request, res: Response) {

@@ -167,7 +167,7 @@ export default function ReportsPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Usuarios Totales</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Usuarios Totales</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{stats.userStats.totalUsers}</div>
                     </div>
                 </div>
@@ -176,7 +176,7 @@ export default function ReportsPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Adhesión Activa</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Adhesión Activa</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{stats.userStats.activeUsers}</div>
                     </div>
                 </div>
@@ -185,7 +185,7 @@ export default function ReportsPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"></path></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Volumen de Reservas</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Volumen de Reservas</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{totalReservations}</div>
                     </div>
                 </div>
@@ -194,7 +194,7 @@ export default function ReportsPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Promedio Diario</div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Promedio Diario</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text)' }}>{(totalReservations / 5).toFixed(1)}</div>
                     </div>
                 </div>
@@ -211,10 +211,10 @@ export default function ReportsPage() {
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={stats.dailyStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
-                            <YAxis tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+                            <XAxis dataKey="date" tick={{ fill: 'var(--text-light)' }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fill: 'var(--text-light)' }} tickLine={false} axisLine={false} />
                             <Tooltip 
-                                cursor={{ fill: 'var(--bg-hover)' }}
+                                cursor={{ fill: 'var(--border)' }}
                                 contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                             />
                             <Legend wrapperStyle={{ paddingTop: '10px' }} />
@@ -235,10 +235,10 @@ export default function ReportsPage() {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={stats.timeSlotStats} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
-                                <YAxis tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+                                <XAxis dataKey="time" tick={{ fill: 'var(--text-light)' }} tickLine={false} axisLine={false} />
+                                <YAxis tick={{ fill: 'var(--text-light)' }} tickLine={false} axisLine={false} />
                                 <Tooltip 
-                                    cursor={{ fill: 'var(--bg-hover)' }}
+                                    cursor={{ fill: 'var(--border)' }}
                                     contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                                 />
                                 <Bar dataKey="count" name="Reservas" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={60} />
@@ -256,10 +256,10 @@ export default function ReportsPage() {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={stats.popularDishes} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" />
-                                <XAxis type="number" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
-                                <YAxis dataKey="name" type="category" width={140} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+                                <XAxis type="number" tick={{ fill: 'var(--text-light)' }} tickLine={false} axisLine={false} />
+                                <YAxis dataKey="name" type="category" width={140} tick={{ fill: 'var(--text-light)', fontSize: 11 }} tickLine={false} axisLine={false} />
                                 <Tooltip 
-                                    cursor={{ fill: 'var(--bg-hover)' }}
+                                    cursor={{ fill: 'var(--border)' }}
                                     contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
                                 />
                                 <Bar dataKey="count" name="Pedidos" radius={[0, 4, 4, 0]} maxBarSize={40}>
