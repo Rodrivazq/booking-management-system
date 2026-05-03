@@ -31,7 +31,9 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   }
 
   if (!res.ok) {
-    if (res.status === 401) {
+    // 401 con token = sesión expirada/inválida -> limpiar y redirigir.
+    // 401 sin token = intento de login/auth fallido -> propagar el mensaje real del backend.
+    if (res.status === 401 && token) {
       localStorage.removeItem('token');
       localStorage.removeItem('auth-storage');
       if (window.location.pathname !== '/login') {
