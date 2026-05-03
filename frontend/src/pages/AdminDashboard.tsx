@@ -67,8 +67,8 @@ export default function AdminDashboard() {
     })
 
     const handleCreateUser = async () => {
-        if (!newUser.name || !newUser.email || !newUser.password || !newUser.funcNumber || !newUser.documentId || !newUser.photoUrl) {
-            error('Por favor completa todos los campos obligatorios, incluyendo la foto de perfil y documento')
+        if (!newUser.name || !newUser.email || !newUser.password || !newUser.funcNumber || !newUser.documentId) {
+            error('Por favor completa todos los campos obligatorios, incluyendo el documento')
             return
         }
         try {
@@ -636,14 +636,17 @@ export default function AdminDashboard() {
                                 <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'var(--bg)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                                     <h4 style={{ marginBottom: '1rem' }}>Nuevo Usuario</h4>
                                     <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil (Obligatoria)</label>
-                                        <AvatarUploader 
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil</label>
+                                        <AvatarUploader
                                             ref={avatarRef}
                                             currentPhotoUrl={newUser.photoUrl}
                                             onPhotoChange={(url) => setNewUser(prev => ({ ...prev, photoUrl: url }))}
                                             nameForInitials={newUser.name || 'U'}
                                             size="100px"
                                         />
+                                        <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                            La cuenta usará las iniciales del nombre como avatar.
+                                        </p>
                                     </div>
                                     <div className="grid-2" style={{ gap: '1rem' }}>
                                         <input className="input" placeholder="Nombre Completo" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
@@ -659,16 +662,6 @@ export default function AdminDashboard() {
                                         </select>
                                     </div>
 
-                                    <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                                        <button 
-                                            type="button" 
-                                            className="btn btn-sm btn-secondary" 
-                                            onClick={() => avatarRef.current?.openPicker()}
-                                            style={{ fontSize: '0.9rem', width: '100%', padding: '0.75rem', fontWeight: 600, border: '2px dashed var(--accent)', color: 'var(--accent)', background: 'transparent' }}
-                                        >
-                                            📸 Cargar Foto de Perfil
-                                        </button>
-                                    </div>
                                     <div className="flex-between" style={{ marginTop: '1rem', justifyContent: 'flex-end' }}>
                                         <button className="btn btn-secondary" onClick={() => setShowCreateUser(false)} style={{ marginRight: '0.5rem' }}>Cancelar</button>
                                         <button className="btn btn-primary" onClick={handleCreateUser}>Crear</button>
