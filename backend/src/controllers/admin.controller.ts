@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import prisma from '../utils/prisma';
+import logger from '../utils/logger';
 import { sendAdminCreatedUserEmail } from '../services/email.service';
 import { validateImageUrl } from '../utils/validators';
 
@@ -294,5 +296,164 @@ export const previewUsersImport = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error previewing users import:', error);
         res.status(500).json({ error: 'Error al validar la importación de usuarios' });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// importUsers
+// ---------------------------------------------------------------------------
+// Bulk import endpoint backing the SuperAdmin CSV flow. Designed for the
+// 200-employee onboarding (cierre objetivo: 7/5/2026 según LAUNCH_PLAN).
+//
+// Cumple los 5 requisitos del CLAUDE.md regla 12:
+//   1. Idempotencia: matching por email/funcNumber/documentId contra DB.
+//      Re-correr el mismo CSV no duplica usuarios — los marca como "saltados".
+//   2. Confirmación runtime: requiere body.confirm === true (más allá del
+//      requireSuperAdmin del middleware), para evitar disparos accidentales
+//      desde un cliente que reuse el payload del preview.
+//   3. Dry-run: previewUsersImport sirve de dry-run sin tocar DB; el cliente
+//      web obliga a pasar por preview antes de habilitar el botón de import.
+//   4. Rollback documentado: docs/ROLLBACK_PLAN.md §4.5 cubre el escenario
+//      de import con datos incorrectos.
+//   5. Reporte estructurado: { created, skipped, failed } con razón por fila.
+// ---------------------------------------------------------------------------
+export const importUsers = async (req: Request, res: Response) => {
+    try {
+        const { users, confirm } = req.body || {};
+
+        if (confirm !== true) {
+            return res.status(400).json({ error: 'Confirmación explícita requerida (confirm:true).' });
+        }
+
+        if (!Array.isArray(users)) {
+            return res.status(400).json({ error: 'El payload debe contener un array "users"' });
+        }
+
+        if (users.length === 0) {
+            return res.status(400).json({ error: 'No se recibieron usuarios para importar.' });
+        }
+
+        if (users.length > 500) {
+            return res.status(400).json({ error: 'La importación admite hasta 500 usuarios por archivo.' });
+        }
+
+        // Pre-fetch existing records in bulk for duplicate detection.
+        const emailsToCheck = users.map(u => String(u?.email || '').trim().toLowerCase()).filter(Boolean);
+        const funcsToCheck = users.map(u => String(u?.funcNumber || '').replace(/\s+/g, '').toUpperCase()).filter(Boolean);
+        const docsToCheck = users.map(u => String(u?.documentId || '').trim()).filter(Boolean);
+
+        const [existingEmails, existingFuncs, existingDocs] = await Promise.all([
+            prisma.user.findMany({ where: { email: { in: emailsToCheck } }, select: { email: true } }),
+            prisma.user.findMany({ where: { funcNumber: { in: funcsToCheck } }, select: { funcNumber: true } }),
+            prisma.user.findMany({ where: { documentId: { in: docsToCheck } }, select: { documentId: true } })
+        ]);
+
+        const dbEmails = new Set(existingEmails.map(u => u.email));
+        const dbFuncs = new Set(existingFuncs.map(u => u.funcNumber));
+        const dbDocs = new Set(existingDocs.map(u => u.documentId));
+
+        const seenEmails = new Set<string>();
+        const seenFuncs = new Set<string>();
+        const seenDocs = new Set<string>();
+
+        type ResultRow = { row: number; email: string; reason?: string; emailSent?: boolean };
+        const created: ResultRow[] = [];
+        const skipped: ResultRow[] = [];
+        const failed: ResultRow[] = [];
+
+        for (let index = 0; index < users.length; index++) {
+            const rowNum = index + 1;
+            const user = users[index] || {};
+
+            const normalizedName = String(user.name || '').trim();
+            const normalizedEmail = String(user.email || '').trim().toLowerCase();
+            const normalizedFunc = String(user.funcNumber || '').replace(/\s+/g, '').toUpperCase();
+            const normalizedDoc = String(user.documentId || '').trim();
+            const normalizedPhone = user.phoneNumber ? String(user.phoneNumber).trim() : null;
+            const normalizedRole = user.role ? String(user.role).trim().toLowerCase() : 'user';
+
+            // ---- Validation ----
+            if (!normalizedName || !normalizedEmail || !normalizedFunc || !normalizedDoc) {
+                failed.push({ row: rowNum, email: normalizedEmail, reason: 'Faltan campos obligatorios.' });
+                continue;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+                failed.push({ row: rowNum, email: normalizedEmail, reason: 'Email inválido.' });
+                continue;
+            }
+            if (!['user', 'admin'].includes(normalizedRole)) {
+                failed.push({ row: rowNum, email: normalizedEmail, reason: 'Rol inválido (solo user o admin).' });
+                continue;
+            }
+
+            // ---- Skip on duplicates (idempotency) ----
+            if (dbEmails.has(normalizedEmail) || dbFuncs.has(normalizedFunc) || dbDocs.has(normalizedDoc)) {
+                skipped.push({ row: rowNum, email: normalizedEmail, reason: 'Ya existe en el sistema.' });
+                continue;
+            }
+            if (seenEmails.has(normalizedEmail) || seenFuncs.has(normalizedFunc) || seenDocs.has(normalizedDoc)) {
+                skipped.push({ row: rowNum, email: normalizedEmail, reason: 'Duplicado dentro del mismo archivo.' });
+                continue;
+            }
+
+            seenEmails.add(normalizedEmail);
+            seenFuncs.add(normalizedFunc);
+            seenDocs.add(normalizedDoc);
+
+            // ---- Create ----
+            // Random temporary password. Never returned to the client and never
+            // logged. Users complete onboarding via "olvidé contraseña" to set
+            // their own. The welcome email points to that flow.
+            const tempPassword = randomBytes(24).toString('base64url');
+            const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+            try {
+                const newUser = await prisma.user.create({
+                    data: {
+                        name: normalizedName,
+                        email: normalizedEmail,
+                        passwordHash,
+                        role: normalizedRole,
+                        funcNumber: normalizedFunc,
+                        documentId: normalizedDoc,
+                        phoneNumber: normalizedPhone,
+                        photoUrl: null,
+                        isEmailVerified: true,
+                    }
+                });
+
+                // Welcome email is best-effort. A failure here does NOT roll back
+                // the user creation — the admin can resend manually. The email
+                // service already returns a boolean and logs the real Resend
+                // error for diagnostics (see commit 02dbf33).
+                const emailSent = await sendAdminCreatedUserEmail(newUser);
+                created.push({ row: rowNum, email: normalizedEmail, emailSent });
+            } catch (createError) {
+                logger.error(`[Import] Failed to create row ${rowNum} (${normalizedEmail}):`, createError);
+                failed.push({ row: rowNum, email: normalizedEmail, reason: 'Error al crear el usuario en la base.' });
+            }
+        }
+
+        const summary = {
+            totalReceived: users.length,
+            createdCount: created.length,
+            skippedCount: skipped.length,
+            failedCount: failed.length,
+            emailsSent: created.filter(c => c.emailSent === true).length,
+            emailsFailed: created.filter(c => c.emailSent === false).length,
+        };
+
+        logger.info(`[Import] SuperAdmin ${req.user?.id} ran CSV import: ${JSON.stringify(summary)}`);
+
+        return res.json({
+            ok: true,
+            summary,
+            created,
+            skipped,
+            failed,
+        });
+    } catch (error) {
+        console.error('Error importing users:', error);
+        res.status(500).json({ error: 'Error al ejecutar la importación de usuarios' });
     }
 };

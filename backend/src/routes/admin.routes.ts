@@ -8,5 +8,6 @@ router.put('/users/:userId/details', authMiddleware, requireAdmin, adminControll
 router.put('/users/:userId/role', authMiddleware, requireSuperAdmin, adminController.changeUserRole);
 router.post('/users', authMiddleware, requireAdmin, adminController.createUser);
 router.post('/users/preview-csv', authMiddleware, requireSuperAdmin, adminController.previewUsersImport);
+router.post('/users/import-csv', authMiddleware, requireSuperAdmin, adminController.importUsers);
 
 export default router;
