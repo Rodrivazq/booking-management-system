@@ -2,6 +2,7 @@ import app from './app';
 import { PORT, FRONTEND_URL, RESEND_API_KEY, SMTP, NODE_ENV, TZ } from './config/env';
 import logger from './utils/logger';
 import prisma from './utils/prisma';
+import { startReminderCron } from './jobs/reminder';
 
 // Process Error Handlers
 process.on('uncaughtException', (err: any) => {
@@ -38,6 +39,11 @@ const startServer = async () => {
     app.listen(PORT, "0.0.0.0", () => {
       logger.info(`🚀 Servidor escuchando en puerto ${PORT}`);
     });
+
+    // Start reminder cron after server is up. Was imported in app.ts but never
+    // invoked — confirmed in audit. Critical for the reservation deadline
+    // reminder flow before the first cierre on 14/5.
+    await startReminderCron();
   } catch (error: any) {
     logger.error('❌ Error al iniciar el servidor:', { message: error?.message });
     process.exit(1);

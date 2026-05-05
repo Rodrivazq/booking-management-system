@@ -23,7 +23,8 @@ const mailer = createTransport();
 // getNextMonday is now imported from utils
 
 export const startReminderCron = async () => {
-    // Run daily at 10 AM
+    // Run daily at 10 AM Uruguay time. Timezone explícito para no depender
+    // de TZ del proceso (defensa por si Railway no propaga TZ env var).
     cron.schedule('0 10 * * *', async () => {
         logger.info('[CRON] Starting daily reservation reminder check');
         
@@ -128,7 +129,7 @@ export const startReminderCron = async () => {
         } catch (error) {
             logger.error('[CRON] Critical error executing reminder cron job:', error);
         }
-    });
+    }, { timezone: 'America/Montevideo' });
 
-    logger.info('[CRON] Reminder job initialized and scheduled daily at 10:00 AM');
+    logger.info('[CRON] Reminder job initialized and scheduled daily at 10:00 AM (America/Montevideo)');
 };

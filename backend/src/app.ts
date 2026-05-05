@@ -12,7 +12,6 @@ import settingsRoutes from './routes/settings.routes';
 import statsRoutes from './routes/stats.routes';
 import ratingsRoutes from './routes/ratings.routes';
 
-import { startReminderCron } from './jobs/reminder';
 import helmet from 'helmet';
 import { globalLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
