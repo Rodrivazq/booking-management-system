@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { getMyRatings, upsertRating, getAdminRatings } from '../src/controllers/ratings.controller';
+import { getMyRatings, upsertRating, getAdminRatings, getGlobalAdminRatings } from '../src/controllers/ratings.controller';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -225,5 +225,61 @@ describe('getAdminRatings', () => {
         await getAdminRatings(req, res);
 
         expect(res.status).toHaveBeenCalledWith(400);
+    });
+});
+
+describe('getGlobalAdminRatings', () => {
+    it('aggregates ratings across all weeks by itemName + itemType', async () => {
+        const req = {} as any;
+        const res = makeRes();
+
+        prismaMock.dishRating.findMany.mockResolvedValue([
+            // Milanesa across two weeks
+            { itemName: 'Milanesa', itemType: 'meal', rating: 'liked' } as any,
+            { itemName: 'Milanesa', itemType: 'meal', rating: 'liked' } as any,
+            { itemName: 'Milanesa', itemType: 'meal', rating: 'neutral' } as any,
+            // Pollo
+            { itemName: 'Pollo', itemType: 'meal', rating: 'disliked' } as any,
+            // Flan
+            { itemName: 'Flan', itemType: 'dessert', rating: 'liked' } as any,
+            { itemName: 'Flan', itemType: 'dessert', rating: 'liked' } as any,
+        ]);
+
+        await getGlobalAdminRatings(req, res);
+
+        const result = res.json.mock.calls[0][0];
+
+        // Three distinct items grouped
+        expect(result).toHaveLength(3);
+
+        // Meals appear before desserts
+        expect(result[0].itemType).toBe('meal');
+        expect(result[result.length - 1].itemType).toBe('dessert');
+
+        // Milanesa: 2 liked, 1 neutral, 0 disliked, total 3, 67% positive
+        const milanesa = result.find((r: { itemName: string }) => r.itemName === 'Milanesa');
+        expect(milanesa).toEqual(expect.objectContaining({
+            liked: 2,
+            neutral: 1,
+            disliked: 0,
+            total: 3,
+            positivePercent: 67,
+        }));
+
+        // Within meals, Milanesa (67%) sorted before Pollo (0%)
+        const meals = result.filter((r: { itemType: string }) => r.itemType === 'meal');
+        expect(meals[0].itemName).toBe('Milanesa');
+        expect(meals[1].itemName).toBe('Pollo');
+    });
+
+    it('returns empty array when there are no ratings', async () => {
+        const req = {} as any;
+        const res = makeRes();
+
+        prismaMock.dishRating.findMany.mockResolvedValue([]);
+
+        await getGlobalAdminRatings(req, res);
+
+        expect(res.json).toHaveBeenCalledWith([]);
     });
 });
