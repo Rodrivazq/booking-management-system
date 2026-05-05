@@ -1,10 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '../hooks/useAuthStore'
 import apiFetch from '../api'
 import ThemeToggle from '../components/ThemeToggle'
-import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarUploader'
 import { useToast } from '../context/ToastContext'
 import { Turnstile } from '@marsidev/react-turnstile'
 
@@ -15,7 +14,6 @@ export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-    const avatarRef = useRef<AvatarUploaderHandle>(null)
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -195,22 +193,6 @@ export default function AuthPage() {
                         </div>
                     ) : (
                         <>
-                            <div style={{ paddingBottom: '1rem', textAlign: 'center' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil</label>
-                                <AvatarUploader
-                                    ref={avatarRef}
-                                    currentPhotoUrl={formData.photoUrl}
-                                    onPhotoChange={(url) => {
-                                        setFormData(prev => ({ ...prev, photoUrl: url }))
-                                        if (url && error.includes('foto')) setError('')
-                                    }}
-                                    nameForInitials={formData.name || 'U'}
-                                    size="100px"
-                                />
-                                <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                                    Tu cuenta usará las iniciales de tu nombre como avatar.
-                                </p>
-                            </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre Completo</label>
                                 <input
