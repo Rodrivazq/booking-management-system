@@ -11,7 +11,8 @@
     "test": "vitest run",
     "seed:superadmin": "ts-node src/scripts/create-superadmin.ts",
     "ops:check": "ts-node src/scripts/ops-check.ts",
-    "load-test": "ts-node src/scripts/load-test.ts"
+    "load-test": "ts-node src/scripts/load-test.ts",
+    "backup:rehearsal": "ts-node src/scripts/backup-rehearsal.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
