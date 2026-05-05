@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -18,12 +18,50 @@ interface ReportStats {
     detailedReservations: any[];
 }
 
+interface WeeklyRatingRow {
+    itemName: string;
+    itemType: 'meal' | 'dessert';
+    day: string;
+    liked: number;
+    neutral: number;
+    disliked: number;
+    total: number;
+    positivePercent: number;
+}
+
+interface GlobalRatingRow {
+    itemName: string;
+    itemType: 'meal' | 'dessert';
+    liked: number;
+    neutral: number;
+    disliked: number;
+    total: number;
+    positivePercent: number;
+}
+
+// Semantic colors for rating cells (greater contrast in both light and dark modes).
+const RATING_COLORS = {
+    liked:    { bg: 'rgba(22, 163, 74, 0.15)',  text: '#16a34a' },  // verde
+    neutral:  { bg: 'rgba(234, 179, 8, 0.15)',  text: '#a16207' },  // amarillo
+    disliked: { bg: 'rgba(220, 38, 38, 0.15)',  text: '#dc2626' },  // rojo
+};
+
+const ratingCellStyle = (kind: 'liked' | 'neutral' | 'disliked', value: number): CSSProperties => ({
+    textAlign: 'right',
+    fontWeight: 700,
+    color: value > 0 ? RATING_COLORS[kind].text : 'var(--text-light)',
+    background: value > 0 ? RATING_COLORS[kind].bg : 'transparent',
+});
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function ReportsPage() {
     const { user } = useAuthStore();
     const navigate = useNavigate();
     const [stats, setStats] = useState<ReportStats | null>(null);
+    const [weeklyRatings, setWeeklyRatings] = useState<WeeklyRatingRow[]>([]);
+    const [globalRatings, setGlobalRatings] = useState<GlobalRatingRow[]>([]);
+    const [ratingsView, setRatingsView] = useState<'week' | 'global'>('week');
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -41,16 +79,21 @@ export default function ReportsPage() {
                 const day = d.getDay();
                 const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
                 const monday = new Date(d.setDate(diff));
-                
+
                 // Use local date string to avoid UTC shifts
                 const year = monday.getFullYear();
                 const month = String(monday.getMonth() + 1).padStart(2, '0');
                 const dd = String(monday.getDate()).padStart(2, '0');
                 const weekStr = `${year}-${month}-${dd}`;
 
-                console.log('Fetching stats for week:', weekStr);
-                const data = await apiFetch<ReportStats>(`/api/reports/stats?week=${weekStr}`);
+                const [data, weekly, global] = await Promise.all([
+                    apiFetch<ReportStats>(`/api/reports/stats?week=${weekStr}`),
+                    apiFetch<WeeklyRatingRow[]>(`/api/ratings/admin?week=${weekStr}`).catch(() => []),
+                    apiFetch<GlobalRatingRow[]>(`/api/ratings/admin/global`).catch(() => []),
+                ]);
                 setStats(data);
+                setWeeklyRatings(weekly);
+                setGlobalRatings(global);
             } catch (err) {
                 console.error('ReportsPage: Error fetching stats', err);
             } finally {
@@ -271,6 +314,120 @@ export default function ReportsPage() {
                         </ResponsiveContainer>
                     </div>
                 </div>
+            </div>
+
+            {/* Calificaciones de platos */}
+            <div className="card" style={{ marginBottom: '2rem' }}>
+                <div style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                        <h3 style={{ margin: 0, color: 'var(--accent)', fontSize: '1.4rem' }}>Calificaciones de platos</h3>
+                        <p className="muted" style={{ margin: 0, fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                            {ratingsView === 'week'
+                                ? 'Cómo calificó la gente los platos de esta semana específica.'
+                                : 'Promedio histórico por plato, agregando todas las semanas servidas.'}
+                        </p>
+                    </div>
+                    <div className="btn-group" role="tablist" aria-label="Vista de calificaciones">
+                        <button
+                            type="button"
+                            className={`btn btn-sm ${ratingsView === 'week' ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setRatingsView('week')}
+                        >
+                            Esta semana
+                        </button>
+                        <button
+                            type="button"
+                            className={`btn btn-sm ${ratingsView === 'global' ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setRatingsView('global')}
+                        >
+                            Global (todas)
+                        </button>
+                    </div>
+                </div>
+
+                {ratingsView === 'week' && (
+                    weeklyRatings.length === 0 ? (
+                        <p className="muted" style={{ padding: '1rem 0' }}>
+                            Todavía no hay calificaciones para esta semana. Las calificaciones se habilitan a partir del día servido.
+                        </p>
+                    ) : (
+                        <div className="admin-table-wrap">
+                            <table className="res-table">
+                                <thead>
+                                    <tr>
+                                        <th>Plato</th>
+                                        <th>Tipo</th>
+                                        <th>Día</th>
+                                        <th style={{ textAlign: 'right' }} title="Me gustó">👍 Me gustó</th>
+                                        <th style={{ textAlign: 'right' }} title="Indiferente">😐 Indiferente</th>
+                                        <th style={{ textAlign: 'right' }} title="No me gustó">👎 No me gustó</th>
+                                        <th style={{ textAlign: 'right' }}>Total</th>
+                                        <th style={{ textAlign: 'right' }}>% positivo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {weeklyRatings.map((r, idx) => (
+                                        <tr key={`${r.itemType}-${r.day}-${r.itemName}-${idx}`}>
+                                            <td style={{ color: 'var(--text)' }}>{r.itemName}</td>
+                                            <td><span className="badge badge-gray">{r.itemType === 'meal' ? 'Comida' : 'Postre'}</span></td>
+                                            <td style={{ textTransform: 'capitalize', color: 'var(--text)' }}>{r.day}</td>
+                                            <td style={ratingCellStyle('liked', r.liked)}>{r.liked}</td>
+                                            <td style={ratingCellStyle('neutral', r.neutral)}>{r.neutral}</td>
+                                            <td style={ratingCellStyle('disliked', r.disliked)}>{r.disliked}</td>
+                                            <td style={{ textAlign: 'right', color: 'var(--text)', fontWeight: 700 }}>{r.total}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                                                <span className={`badge ${r.positivePercent >= 70 ? 'badge-success' : r.positivePercent >= 40 ? 'badge-gray' : 'badge-danger'}`}>
+                                                    {r.positivePercent}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                )}
+
+                {ratingsView === 'global' && (
+                    globalRatings.length === 0 ? (
+                        <p className="muted" style={{ padding: '1rem 0' }}>
+                            Todavía no hay calificaciones registradas en el sistema.
+                        </p>
+                    ) : (
+                        <div className="admin-table-wrap">
+                            <table className="res-table">
+                                <thead>
+                                    <tr>
+                                        <th>Plato</th>
+                                        <th>Tipo</th>
+                                        <th style={{ textAlign: 'right' }} title="Me gustó">👍 Me gustó</th>
+                                        <th style={{ textAlign: 'right' }} title="Indiferente">😐 Indiferente</th>
+                                        <th style={{ textAlign: 'right' }} title="No me gustó">👎 No me gustó</th>
+                                        <th style={{ textAlign: 'right' }}>Total</th>
+                                        <th style={{ textAlign: 'right' }}>% positivo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {globalRatings.map((r, idx) => (
+                                        <tr key={`${r.itemType}-${r.itemName}-${idx}`}>
+                                            <td style={{ color: 'var(--text)' }}>{r.itemName}</td>
+                                            <td><span className="badge badge-gray">{r.itemType === 'meal' ? 'Comida' : 'Postre'}</span></td>
+                                            <td style={ratingCellStyle('liked', r.liked)}>{r.liked}</td>
+                                            <td style={ratingCellStyle('neutral', r.neutral)}>{r.neutral}</td>
+                                            <td style={ratingCellStyle('disliked', r.disliked)}>{r.disliked}</td>
+                                            <td style={{ textAlign: 'right', color: 'var(--text)', fontWeight: 700 }}>{r.total}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                                                <span className={`badge ${r.positivePercent >= 70 ? 'badge-success' : r.positivePercent >= 40 ? 'badge-gray' : 'badge-danger'}`}>
+                                                    {r.total === 0 ? '—' : `${r.positivePercent}%`}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                )}
             </div>
         </Layout>
     );
