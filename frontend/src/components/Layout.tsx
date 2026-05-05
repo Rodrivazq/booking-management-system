@@ -24,6 +24,7 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [qrModalOpen, setQrModalOpen] = useState(false)
     const [qrCode, setQrCode] = useState('')
+    const [qrError, setQrError] = useState('')
 
     const appUrl = window.location.origin
     const shareText = `Acceso al Sistema de Reservas Real Sabor: ${appUrl}`
@@ -46,11 +47,14 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
         setQrModalOpen(true)
         setMobileMenuOpen(false)
         if (!qrCode) {
+            setQrError('')
             try {
                 const res = await apiFetch<{ dataUrl: string }>('/api/qr')
                 setQrCode(res.dataUrl)
             } catch (error) {
                 console.error(error)
+                const message = error instanceof Error ? error.message : 'No se pudo generar el QR'
+                setQrError(message)
             }
         }
     }
@@ -230,6 +234,11 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
                         <div className="share-qr-frame">
                             {qrCode ? (
                                 <img src={qrCode} alt="QR de acceso a la app" />
+                            ) : qrError ? (
+                                <div className="share-qr-loading" style={{ color: 'var(--error-text, #991b1b)' }}>
+                                    No se pudo cargar el QR.<br />
+                                    <small>{qrError}</small>
+                                </div>
                             ) : (
                                 <div className="share-qr-loading">Cargando QR...</div>
                             )}

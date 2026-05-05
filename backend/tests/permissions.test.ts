@@ -139,12 +139,13 @@ describe('Permission Matrix — Role Enforcement', () => {
       expect(res.status).toBe(403);
     });
 
-    it('user → GET /api/qr → 403', async () => {
+    it('user → GET /api/qr → 200 (any logged-in user can share access)', async () => {
       authAs(userRecord);
       const res = await request(app)
         .get('/api/qr')
         .set('Authorization', `Bearer ${userToken}`);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('dataUrl');
     });
 
     it('admin → GET /api/qr → 200', async () => {
