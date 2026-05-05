@@ -10,6 +10,17 @@ export const loginLimiter = rateLimit({
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+// Mucho más agresivo que login porque cada hit dispara un envío de email
+// real (gasto de cuota Resend) y no requiere nada del lado del usuario para
+// abusarlo. 5/15min por IP es suficiente para casos legítimos.
+export const forgotPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 5,
+    message: 'Demasiados intentos de recuperación de contraseña. Probá de nuevo en 15 minutos.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 export const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     // 20000 / 15min para que el cierre de reservas del jueves (200 usuarios
