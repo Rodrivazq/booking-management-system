@@ -156,16 +156,20 @@ export default function AuthPage() {
                         <img src="/assets/logo_real_sabor_clean.png" alt="Logo" className="premium-logo" style={{ width: '8rem', height: '8rem', padding: '12px', marginBottom: '2rem' }} />
                     )}
                     <h1>{settings.welcomeTitle || settings.companyName}</h1>
-                    <p>{settings.welcomeMessage || 'Gestiona tus comidas diarias de forma eficiente. Planifica tu semana y disfruta de un servicio de comedor de primera clase.'}</p>
+                    <p>{settings.welcomeMessage || 'Gestioná tus comidas semanales de forma simple. Elegí tu menú, recibí recordatorios y dejá tu opinión.'}</p>
 
-                    <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
-                        <div>
-                            <h3 style={{ color: 'white', fontSize: '2rem', marginBottom: '0' }}>+1k</h3>
-                            <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>Usuarios Activos</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '2rem', maxWidth: '380px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>🍽️</span>
+                            <span style={{ fontSize: '0.95rem', opacity: 0.9 }}>Reservá tu menú de toda la semana en minutos</span>
                         </div>
-                        <div>
-                            <h3 style={{ color: 'white', fontSize: '2rem', marginBottom: '0' }}>4.8</h3>
-                            <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>Satisfaccion</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>📧</span>
+                            <span style={{ fontSize: '0.95rem', opacity: 0.9 }}>Recibí recordatorios antes del cierre</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '1.5rem' }}>⭐</span>
+                            <span style={{ fontSize: '0.95rem', opacity: 0.9 }}>Calificá los platos que disfrutaste</span>
                         </div>
                     </div>
                 </div>
@@ -399,7 +403,7 @@ export default function AuthPage() {
 
                     <div>
                         <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ fontWeight: 500 }}>Contrasena</label>
+                            <label style={{ fontWeight: 500 }}>Contraseña</label>
                             {isLogin && (
                                 <button
                                     type="button"
@@ -407,7 +411,7 @@ export default function AuthPage() {
                                     className="btn"
                                     style={{ background: 'transparent', color: 'var(--accent)', fontSize: '0.85rem', padding: 0, height: 'auto' }}
                                 >
-                                    ¿Olvidaste tu contrasena?
+                                    ¿Olvidaste tu contraseña?
                                 </button>
                             )}
                         </div>
@@ -468,7 +472,7 @@ export default function AuthPage() {
                                     onChange={(e) => setRememberMe(e.target.checked)}
                                     style={{ accentColor: 'var(--accent)', width: '1rem', height: '1rem' }}
                                 />
-                                <label htmlFor="rememberMe" style={{ cursor: 'pointer', userSelect: 'none' }}>Recordar usuario</label>
+                                <label htmlFor="rememberMe" style={{ cursor: 'pointer', userSelect: 'none' }}>Recordar mi usuario</label>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <input
@@ -478,7 +482,7 @@ export default function AuthPage() {
                                     onChange={(e) => setKeepSession(e.target.checked)}
                                     style={{ accentColor: 'var(--accent)', width: '1rem', height: '1rem' }}
                                 />
-                                <label htmlFor="keepSession" style={{ cursor: 'pointer', userSelect: 'none' }}>Mantener sesion iniciada</label>
+                                <label htmlFor="keepSession" style={{ cursor: 'pointer', userSelect: 'none' }}>Mantener sesión iniciada</label>
                             </div>
                         </div>
                     )}
@@ -501,21 +505,30 @@ export default function AuthPage() {
                     )}
 
                     <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '1rem' }} disabled={loading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}>
-                        {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesion' : 'Crear Cuenta')}
+                        {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
                     </button>
                 </form>
 
                 <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-                    <p className="muted" style={{ fontSize: '0.9rem' }}>
-                        {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
-                        <button
-                            onClick={() => { setIsLogin(!isLogin); setError(''); }}
-                            className="btn"
-                            style={{ background: 'transparent', color: 'var(--accent)', padding: '0 0.5rem', height: 'auto', display: 'inline', fontWeight: 600 }}
-                        >
-                            {isLogin ? 'Registrate aqui' : 'Inicia Sesion'}
-                        </button>
+                    <p className="muted" style={{ fontSize: '0.95rem', marginBottom: '0.75rem' }}>
+                        {isLogin ? '¿Es tu primera vez?' : '¿Ya tenés cuenta?'}
                     </p>
+                    <button
+                        type="button"
+                        onClick={() => { setIsLogin(!isLogin); setError(''); }}
+                        className="btn btn-secondary"
+                        style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '2px solid var(--accent)',
+                            color: 'var(--accent)',
+                            background: 'transparent',
+                            fontWeight: 600,
+                            fontSize: '1rem'
+                        }}
+                    >
+                        {isLogin ? 'Crear una cuenta nueva' : 'Iniciar Sesión'}
+                    </button>
                 </div>
 
                 <div style={{ marginTop: 'auto', textAlign: 'center', paddingTop: '2rem' }}>
