@@ -14,6 +14,9 @@ export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [registrationComplete, setRegistrationComplete] = useState(false)
+    const [registeredEmail, setRegisteredEmail] = useState('')
+    const [registrationWarning, setRegistrationWarning] = useState(false)
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -86,7 +89,7 @@ export default function AuthPage() {
                 }
             } else {
                 // REGISTER FLOW
-                await apiFetch<{ message: string }>('/api/auth/register', {
+                const res = await apiFetch<{ message: string; warning?: boolean }>('/api/auth/register', {
                     method: 'POST',
                     body: JSON.stringify({
                         name: formData.name,
@@ -99,10 +102,15 @@ export default function AuthPage() {
                         turnstileToken
                     })
                 })
-                // Registration succeeded — show success prompt to verify email
+                // Registration succeeded — show dedicated "check your email" screen.
+                // Captures backend's warning flag so a failed email send is surfaced
+                // instead of silently telling the user "check your inbox".
                 setError('')
-                addToast('✅ Cuenta creada. Revisa tu correo y verifica tu cuenta antes de ingresar.', 'success')
-                setIsLogin(true)
+                setRegisteredEmail(formData.email)
+                setRegistrationWarning(res.warning === true)
+                setRegistrationComplete(true)
+                // Clear sensitive fields so they don't sit in memory if user comes back
+                setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }))
             }
         } catch (err: any) {
             setError(err.message || 'Error de autenticacion')
@@ -168,6 +176,140 @@ export default function AuthPage() {
                 <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
                     <ThemeToggle />
                 </div>
+                {registrationComplete ? (
+                    <div className="flex-col" style={{ marginTop: '2.5rem', gap: '1.5rem' }}>
+                        {/* Cabecera con icono grande */}
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '50%',
+                                background: registrationWarning ? 'rgba(234, 179, 8, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+                                color: registrationWarning ? '#a16207' : '#16a34a',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '2.5rem',
+                                margin: '0 auto 1rem'
+                            }}>
+                                {registrationWarning ? '⚠️' : '📧'}
+                            </div>
+                            <h2 style={{ marginBottom: '0.5rem' }}>
+                                {registrationWarning ? 'Cuenta creada con advertencia' : '¡Cuenta creada! Revisá tu correo'}
+                            </h2>
+                            <p className="muted" style={{ lineHeight: 1.6 }}>
+                                {registrationWarning
+                                    ? 'Tu cuenta se creó, pero el sistema no pudo enviarte el correo de verificación en este momento.'
+                                    : <>Te enviamos un correo de confirmación a <strong style={{ color: 'var(--text)' }}>{registeredEmail}</strong></>}
+                            </p>
+                        </div>
+
+                        {/* Pasos numerados, solo cuando NO hay warning */}
+                        {!registrationWarning && (
+                            <div style={{
+                                background: 'var(--bg)',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius)',
+                                padding: '1.25rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1rem'
+                            }}>
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                    <span style={{
+                                        flexShrink: 0,
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '50%',
+                                        background: 'var(--accent)',
+                                        color: 'white',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 700,
+                                        fontSize: '0.9rem'
+                                    }}>1</span>
+                                    <p style={{ margin: 0, lineHeight: 1.5 }}>
+                                        Abrí el correo en tu <strong>bandeja de entrada</strong>.
+                                    </p>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                    <span style={{
+                                        flexShrink: 0,
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '50%',
+                                        background: '#eab308',
+                                        color: 'white',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 700,
+                                        fontSize: '0.9rem'
+                                    }}>2</span>
+                                    <p style={{ margin: 0, lineHeight: 1.5 }}>
+                                        <strong>Si no lo ves, revisá la carpeta de SPAM</strong> o &quot;Correo no deseado&quot;.
+                                        Especialmente si usás <strong>Outlook</strong> o <strong>Hotmail</strong>. Cuando lo encuentres, marcalo como &quot;No es spam&quot;.
+                                    </p>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                    <span style={{
+                                        flexShrink: 0,
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '50%',
+                                        background: 'var(--accent)',
+                                        color: 'white',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 700,
+                                        fontSize: '0.9rem'
+                                    }}>3</span>
+                                    <p style={{ margin: 0, lineHeight: 1.5 }}>
+                                        Tocá el botón <strong>&quot;Verificar mi Correo&quot;</strong>. Después podés iniciar sesión.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mensaje específico si el envío del email falló */}
+                        {registrationWarning && (
+                            <div style={{
+                                padding: '1rem',
+                                background: 'var(--warning-bg, #fffbeb)',
+                                color: 'var(--warning-text, #92400e)',
+                                border: '1px solid var(--warning-border, #fde68a)',
+                                borderRadius: 'var(--radius)',
+                                lineHeight: 1.5
+                            }}>
+                                Por favor contactá al administrador de Real Sabor para que active tu cuenta manualmente.
+                                Mientras tanto, no podrás iniciar sesión.
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            style={{ width: '100%', padding: '1rem' }}
+                            onClick={() => {
+                                setRegistrationComplete(false)
+                                setIsLogin(true)
+                            }}
+                        >
+                            Ir al Inicio de Sesión
+                        </button>
+
+                        {!registrationWarning && (
+                            <p className="muted" style={{ fontSize: '0.85rem', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                                ¿No te llegó? Esperá unos minutos y revisá spam de nuevo. Si pasados 10 min no aparece, contactá al administrador.
+                            </p>
+                        )}
+                    </div>
+                ) : (
+                    <>
                 <div className="auth-header" style={{ marginTop: '2.5rem' }}>
                     <h2>{isLogin ? 'Bienvenido de nuevo' : 'Crear Cuenta'}</h2>
                     <p className="muted">
@@ -381,6 +523,8 @@ export default function AuthPage() {
                         &copy; {new Date().getFullYear()} Reservas App. Todos los derechos reservados.
                     </p>
                 </div>
+                    </>
+                )}
             </div>
 
             {/* Forgot Password Modal */}
