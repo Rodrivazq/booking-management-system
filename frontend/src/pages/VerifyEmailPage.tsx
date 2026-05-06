@@ -60,7 +60,7 @@ export default function VerifyEmailPage() {
                 </p>
 
                 {(status === 'success' || status === 'error') && (
-                    <Link to="/auth" className="btn btn-primary" style={{ display: 'inline-block', width: '100%' }}>
+                    <Link to="/login" className="btn btn-primary" style={{ display: 'inline-block', width: '100%' }}>
                         Ir al Inicio de Sesión
                     </Link>
                 )}
