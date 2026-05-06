@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import WeekPicker from '../components/WeekPicker'
@@ -390,8 +390,8 @@ export default function AdminDashboard() {
                                     {reservations.map(r => {
                                         const user = users.find(u => u.id === r.userId)
                                         return (
-                                            <>
-                                                <tr key={r.id}>
+                                            <Fragment key={r.id}>
+                                                <tr>
                                                     <td>
                                                         <div className="user-name">{r.name}</div>
                                                         <div className="user-meta">Func: {r.funcNumber || '—'}</div>
@@ -416,7 +416,7 @@ export default function AdminDashboard() {
                                                     </td>
                                                 </tr>
                                                 {expandedResId === r.id && r.selections && (
-                                                    <tr className="res-expand-row" key={r.id + '-expand'}>
+                                                    <tr className="res-expand-row">
                                                         <td colSpan={4}>
                                                             <div className="res-expand-inner">
                                                                 {r.selections.map((s, idx) => (
@@ -431,7 +431,7 @@ export default function AdminDashboard() {
                                                         </td>
                                                     </tr>
                                                 )}
-                                            </>
+                                            </Fragment>
                                         )
                                     })}
                                 </tbody>
@@ -1296,7 +1296,7 @@ function UserRow({
         phoneNumber: user.phoneNumber || ''
     })
     const [roleChanging, setRoleChanging] = useState(false)
-    const [pendingRole, setPendingRole] = useState<UserRole>(user.role)
+    const [pendingRole, setPendingRole] = useState<UserRole>((user.role as UserRole) || 'user')
 
     useEffect(() => {
         setFormData({
@@ -1305,7 +1305,7 @@ function UserRow({
             email: user.email || '',
             phoneNumber: user.phoneNumber || ''
         })
-        setPendingRole(user.role)
+        setPendingRole((user.role as UserRole) || 'user')
     }, [user])
 
     const handleSave = () => {
@@ -1375,7 +1375,7 @@ function UserRow({
                                 <select
                                     className="input"
                                     style={{ padding: '0.3rem 0.5rem', fontSize: '0.85rem', width: 'auto' }}
-                                    value={pendingRole}
+                                    value={pendingRole || 'user'}
                                     disabled={roleChanging}
                                     onChange={e => {
                                         const nextRole = e.target.value as UserRole;
