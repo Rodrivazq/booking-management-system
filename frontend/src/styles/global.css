@@ -337,26 +337,41 @@ body {
 }
 
 .meal-rating-button:hover {
-  border-color: var(--accent);
-  color: var(--text);
   transform: translateY(-1px);
 }
 
+/* Tinted inactive states so the user sees green/yellow/red intent
+   even before clicking. Hover reinforces. Active fills the background. */
+.meal-rating-positive {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.4);
+}
+.meal-rating-positive:hover { border-color: #16a34a; }
 .meal-rating-positive.active {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: #16a34a;
+  background: #16a34a;
   color: white;
 }
 
+.meal-rating-neutral {
+  color: #a16207;
+  border-color: rgba(234, 179, 8, 0.45);
+}
+.meal-rating-neutral:hover { border-color: #eab308; }
 .meal-rating-neutral.active {
-  border-color: var(--warning);
-  background: var(--warning);
+  border-color: #eab308;
+  background: #eab308;
   color: white;
 }
 
+.meal-rating-negative {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.4);
+}
+.meal-rating-negative:hover { border-color: #dc2626; }
 .meal-rating-negative.active {
-  border-color: var(--error);
-  background: var(--error);
+  border-color: #dc2626;
+  background: #dc2626;
   color: white;
 }
 
