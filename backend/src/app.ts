@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import * as Sentry from '@sentry/node';
 
 import authRoutes from './routes/auth.routes';
 import menuRoutes from './routes/menu.routes';
@@ -149,6 +150,18 @@ app.use('/api/qr', qrRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ratings', ratingsRoutes);
+
+// -----------------------------
+// SENTRY ERROR HANDLER
+// -----------------------------
+// Tiene que ir DESPUÉS de las rutas y ANTES del errorHandler custom. Solo
+// captura errores que llegan al pipeline de express vía next(err). Hoy la
+// mayoría de los controllers manejan su error con try/catch + res.status, no
+// next(err), así que Sentry no los va a ver — eso es deuda técnica
+// reconocida (ver análisis 4/5). Igual capta uncaughtException y
+// unhandledRejection vía los handlers globales del SDK.
+// Si SENTRY_DSN no está seteado, el setup es noop.
+Sentry.setupExpressErrorHandler(app);
 
 // -----------------------------
 // MANEJO DE ERRORES GLOBAL
