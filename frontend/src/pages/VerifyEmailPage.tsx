@@ -45,14 +45,14 @@ export default function VerifyEmailPage() {
                     )}
 
                     {status === 'error' && (
-                        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', margin: '0 auto' }}>
-                            ✕
+                        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(234, 179, 8, 0.15)', color: '#a16207', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', margin: '0 auto' }}>
+                            ⚠️
                         </div>
                     )}
                 </div>
 
                 <h2 style={{ marginBottom: '1rem' }}>
-                    {status === 'loading' ? 'Verificando...' : status === 'success' ? '¡Correo Verificado!' : 'Error de Verificación'}
+                    {status === 'loading' ? 'Verificando...' : status === 'success' ? '¡Correo Verificado!' : 'Enlace ya usado o expirado'}
                 </h2>
                 
                 <p className="muted" style={{ marginBottom: '2rem', lineHeight: '1.6' }}>
