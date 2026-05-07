@@ -21,6 +21,7 @@ export default function AuthPage() {
     const [resendCooldown, setResendCooldown] = useState(0)
     const [formData, setFormData] = useState({
         email: '',
+        confirmEmail: '',
         password: '',
         name: '',
         funcNumber: '',
@@ -60,6 +61,10 @@ export default function AuthPage() {
         setLoading(true)
 
         try {
+            if (!isLogin && formData.email.trim().toLowerCase() !== formData.confirmEmail.trim().toLowerCase()) {
+                throw new Error('Los correos electrónicos no coinciden. Revisá que estén bien escritos en ambos campos.')
+            }
+
             if (!isLogin && formData.password !== formData.confirmPassword) {
                 throw new Error('Las contraseñas no coinciden')
             }
@@ -112,7 +117,7 @@ export default function AuthPage() {
                 setRegistrationWarning(res.warning === true)
                 setRegistrationComplete(true)
                 // Clear sensitive fields so they don't sit in memory if user comes back
-                setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }))
+                setFormData(prev => ({ ...prev, password: '', confirmPassword: '', confirmEmail: '' }))
             }
         } catch (err: any) {
             setError(err.message || 'Error de autenticacion')
@@ -392,7 +397,7 @@ export default function AuthPage() {
                                 />
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Correo Electronico</label>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Correo Electrónico</label>
                                 <input
                                     className="input"
                                     name="email"
@@ -401,7 +406,25 @@ export default function AuthPage() {
                                     onChange={handleChange}
                                     placeholder="juan@empresa.com"
                                     required
+                                    autoComplete="email"
                                 />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Confirmar Correo Electrónico</label>
+                                <input
+                                    className="input"
+                                    name="confirmEmail"
+                                    type="email"
+                                    value={formData.confirmEmail}
+                                    onChange={handleChange}
+                                    placeholder="repetí el correo"
+                                    required
+                                    autoComplete="off"
+                                    onPaste={e => e.preventDefault()}
+                                />
+                                <small className="muted" style={{ fontSize: '0.8rem' }}>
+                                    Escribilo de nuevo para evitar errores de tipeo. Si no recibís el correo de verificación, no podrás iniciar sesión.
+                                </small>
                             </div>
                             <div className="grid-2" style={{ gap: '1rem' }}>
                                 <div>
