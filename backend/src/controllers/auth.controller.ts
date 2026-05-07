@@ -90,6 +90,52 @@ export const register = async (req: Request, res: Response) => {
     }
 };
 
+// ─── POST /api/auth/resend-verification ────────────────────────────────────
+// Re-sends the verification email if the user exists and is not yet verified.
+// Always returns the same neutral response to prevent account enumeration:
+// callers can't tell whether the email is registered or not.
+//
+// Combined with the resendVerificationLimiter (3/15min per IP) this is safe
+// against brute-force probing and Resend quota abuse.
+export const resendVerification = async (req: Request, res: Response) => {
+    const { email } = req.body || {};
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    const NEUTRAL_RESPONSE = {
+        ok: true,
+        message: 'Si la cuenta existe y necesita verificación, te reenviamos el correo. Revisá tu bandeja de entrada y la carpeta de SPAM en unos minutos.'
+    };
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+        // User not found OR already verified: neutral response, no email sent.
+        // Anti-enumeration: caller cannot distinguish these cases.
+        if (!user || user.isEmailVerified) {
+            return res.json(NEUTRAL_RESPONSE);
+        }
+
+        // Regenerate token (invalidates any previous link sent before).
+        const verificationToken = uuidv4();
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { verificationToken },
+        });
+
+        const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
+        const emailSent = await sendVerificationEmail(user, verifyUrl);
+
+        if (!emailSent) {
+            logger.error(`[ResendVerification] Failed to send verification email to ${user.email}`);
+        }
+
+        return res.json(NEUTRAL_RESPONSE);
+    } catch (error) {
+        console.error('Resend verification error:', error);
+        return res.status(500).json({ error: 'Error al procesar la solicitud' });
+    }
+};
+
 export const verifyEmail = async (req: Request, res: Response) => {
     const { token } = req.query;
 

@@ -15,7 +15,7 @@ vi.mock('../src/services/email.service', () => ({
 }));
 
 import { sendVerificationEmail, sendPasswordResetEmail } from '../src/services/email.service';
-import { forgotPassword } from '../src/controllers/auth.controller';
+import { forgotPassword, resendVerification } from '../src/controllers/auth.controller';
 
 describe('Auth Controller (Unit Tests)', () => {
   it('should register a new user successfully', async () => {
@@ -146,6 +146,83 @@ describe('Auth Controller (Unit Tests)', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringMatching(/invalidas|inválidas/i) }));
+  });
+
+  describe('resendVerification', () => {
+    it('regenerates token and sends email when user exists and is not verified', async () => {
+      const req = { body: { email: 'pending@example.com' } } as any;
+      const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'usr-pending',
+        email: 'pending@example.com',
+        name: 'Pending User',
+        isEmailVerified: false,
+      } as any);
+      prismaMock.user.update.mockResolvedValue({} as any);
+
+      await resendVerification(req, res);
+
+      // Token regenerated
+      expect(prismaMock.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'usr-pending' },
+          data: expect.objectContaining({ verificationToken: expect.any(String) }),
+        })
+      );
+      // Email sent
+      expect(sendVerificationEmail).toHaveBeenCalled();
+      // Neutral response
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        ok: true,
+        message: expect.stringContaining('Si la cuenta existe'),
+      }));
+    });
+
+    it('returns neutral response without sending email when user is already verified', async () => {
+      const req = { body: { email: 'verified@example.com' } } as any;
+      const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'usr-verified',
+        email: 'verified@example.com',
+        name: 'Verified User',
+        isEmailVerified: true,
+      } as any);
+
+      vi.mocked(sendVerificationEmail).mockClear();
+      vi.mocked(prismaMock.user.update).mockClear();
+
+      await resendVerification(req, res);
+
+      // No update, no email
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(sendVerificationEmail).not.toHaveBeenCalled();
+      // Same neutral response (anti-enumeration)
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        ok: true,
+        message: expect.stringContaining('Si la cuenta existe'),
+      }));
+    });
+
+    it('returns neutral response when user does not exist (anti-enumeration)', async () => {
+      const req = { body: { email: 'unknown@example.com' } } as any;
+      const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      vi.mocked(sendVerificationEmail).mockClear();
+      vi.mocked(prismaMock.user.update).mockClear();
+
+      await resendVerification(req, res);
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(sendVerificationEmail).not.toHaveBeenCalled();
+      // Identical response shape: caller can't tell the email isn't registered.
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        ok: true,
+        message: expect.stringContaining('Si la cuenta existe'),
+      }));
+    });
   });
 
   it('forgot password mantiene respuesta neutral aunque falle email', async () => {

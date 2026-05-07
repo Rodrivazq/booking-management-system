@@ -42,6 +42,10 @@ export const updateSettingsSchema = z.object({
     announcementType: z.enum(['info', 'warning', 'success', 'error']).nullable().optional(),
 }).strict();
 
+export const resendVerificationSchema = z.object({
+    email: z.string().email('Correo electrónico inválido'),
+}).strict();
+
 export const reservationSchema = z.object({
     weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de semana inválido (YYYY-MM-DD)'),
     selections: z.array(z.object({
