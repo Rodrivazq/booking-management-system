@@ -10,6 +10,18 @@ export const loginLimiter = rateLimit({
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+// Más agresivo que login porque cada hit dispara un email de verificación
+// real (gasto de cuota Resend). 3/15min por IP cubre el caso legítimo
+// (usuario que necesita reintentar 1-2 veces porque el primer envío llegó a
+// spam o tipeó mal y rehace el flujo).
+export const resendVerificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 3,
+    message: 'Demasiados intentos de reenvío. Probá de nuevo en 15 minutos.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Mucho más agresivo que login porque cada hit dispara un envío de email
 // real (gasto de cuota Resend) y no requiere nada del lado del usuario para
 // abusarlo. 5/15min por IP es suficiente para casos legítimos.

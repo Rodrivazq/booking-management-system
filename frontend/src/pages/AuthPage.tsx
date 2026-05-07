@@ -17,6 +17,8 @@ export default function AuthPage() {
     const [registrationComplete, setRegistrationComplete] = useState(false)
     const [registeredEmail, setRegisteredEmail] = useState('')
     const [registrationWarning, setRegistrationWarning] = useState(false)
+    const [resendingVerification, setResendingVerification] = useState(false)
+    const [resendCooldown, setResendCooldown] = useState(0)
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -116,6 +118,30 @@ export default function AuthPage() {
             setError(err.message || 'Error de autenticacion')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleResendVerification = async () => {
+        if (!registeredEmail || resendingVerification || resendCooldown > 0) return
+        setResendingVerification(true)
+        try {
+            const res = await apiFetch<{ message?: string }>('/api/auth/resend-verification', {
+                method: 'POST',
+                body: JSON.stringify({ email: registeredEmail })
+            })
+            addToast(res.message || 'Si la cuenta existe, te reenviamos el correo. Revisá bandeja y SPAM.', 'success')
+            // Cooldown 60s para evitar que el usuario martille y se coma el rate limit (3/15min)
+            setResendCooldown(60)
+            const interval = setInterval(() => {
+                setResendCooldown(prev => {
+                    if (prev <= 1) { clearInterval(interval); return 0 }
+                    return prev - 1
+                })
+            }, 1000)
+        } catch (e: any) {
+            addToast(e.message || 'No pudimos reenviar el correo. Probá en unos minutos.', 'error')
+        } finally {
+            setResendingVerification(false)
         }
     }
 
@@ -307,9 +333,24 @@ export default function AuthPage() {
                         </button>
 
                         {!registrationWarning && (
-                            <p className="muted" style={{ fontSize: '0.85rem', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
-                                ¿No te llegó? Esperá unos minutos y revisá spam de nuevo. Si pasados 10 min no aparece, contactá al administrador.
-                            </p>
+                            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                                <p className="muted" style={{ fontSize: '0.85rem', margin: 0, marginBottom: '0.75rem', lineHeight: 1.5 }}>
+                                    ¿No te llegó después de unos minutos? Revisá SPAM una vez más antes de reenviar.
+                                </p>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    style={{ width: '100%', padding: '0.65rem', fontSize: '0.95rem' }}
+                                    onClick={handleResendVerification}
+                                    disabled={resendingVerification || resendCooldown > 0}
+                                >
+                                    {resendingVerification
+                                        ? 'Reenviando...'
+                                        : resendCooldown > 0
+                                            ? `Reenviar correo (esperá ${resendCooldown}s)`
+                                            : 'Reenviar correo de verificación'}
+                                </button>
+                            </div>
                         )}
                     </div>
                 ) : (
