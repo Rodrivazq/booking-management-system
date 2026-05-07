@@ -1,3 +1,7 @@
+// Sentry instrumentation MUST be the first import. It patches Node modules
+// at init time; anything imported above it won't be instrumented.
+import './instrument';
+
 import app from './app';
 import { PORT, FRONTEND_URL, RESEND_API_KEY, SMTP, NODE_ENV, TZ } from './config/env';
 import logger from './utils/logger';
