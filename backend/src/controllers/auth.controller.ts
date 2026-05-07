@@ -149,7 +149,14 @@ export const verifyEmail = async (req: Request, res: Response) => {
         });
 
         if (!user) {
-            return res.status(400).json({ error: 'El enlace de verificación es inválido o ya fue utilizado.' });
+            // Token not found. Two possible causes, indistinguishable from
+            // here: (a) the user already used this link (we null the token
+            // after successful verify), or (b) the link is bogus/expired.
+            // The safe response covers both without alarming a user who is
+            // already correctly verified.
+            return res.status(400).json({
+                error: 'Este enlace ya fue utilizado o no es válido. Si tu cuenta ya está verificada, podés iniciar sesión normalmente.'
+            });
         }
 
         await prisma.user.update({
@@ -160,7 +167,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
             }
         });
 
-        res.json({ message: 'Correo verificado exitosamente. Ya puedes iniciar sesión.' });
+        res.json({ message: 'Correo verificado exitosamente. Ya podés iniciar sesión.' });
     } catch (error) {
         console.error('Verify Email error:', error);
         res.status(500).json({ error: 'Ocurrió un error al verificar el correo.' });
