@@ -1,47 +1,68 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import type { Request } from 'express';
+
+// Helper: lee el email del body (asumiendo express.json ya parseó). Si no
+// hay email (body vacío, o tipo distinto), cae a la IP del request. Esto
+// es importante para los empleados que usan la WiFi corporativa: todos
+// salen con la misma IP pública pero cada uno tiene su propio email único,
+// así que el cap por-email no los pisa entre sí.
+function emailKey(req: Request): string {
+    const email = req.body?.email;
+    if (typeof email === 'string' && email.trim()) {
+        return `email:${email.trim().toLowerCase()}`;
+    }
+    // Fallback IP-safe (handles IPv6 prefixing per express-rate-limit guideline).
+    return `ip:${ipKeyGenerator(req.ip || '')}`;
+}
 
 export const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     // 1000 / 15min para tolerar el caso de ~200 empleados detrás de la misma
-    // IP NAT corporativa intentando loguear en horario pico.
+    // IP NAT corporativa intentando loguear en horario pico. No dispara
+    // emails así que el riesgo de abuso es solo CPU/bcrypt.
     limit: 1000,
     message: 'Demasiados intentos de inicio de sesión, por favor intente nuevamente después de 15 minutos',
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-// Por IP. Cada registro exitoso dispara un email de verificación, así que
-// sin esto un atacante puede registrar cuentas falsas y consumir cuota
-// Resend hasta hacernos pagar. 5/15min cubre el caso legítimo (200
-// empleados se auto-registran el 11-14/5; ningún humano necesita 5
-// registros en 15 min).
+// Por IP. Generoso porque los 200 empleados van a auto-registrarse desde la
+// MISMA WiFi corporativa entre el 11 y 14/5 — un cap chico (5/15min)
+// bloqueaba a los empleados legítimos. La defensa real contra abuso de
+// envío de emails está en (a) constraint único de email en DB, (b) daily
+// quota global en email.service.ts (300/24h), (c) Turnstile cuando se
+// active. Acá solo evitamos un blast obvio.
 export const registerLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
-    message: 'Demasiados intentos de registro desde esta IP. Probá de nuevo en 15 minutos.',
+    limit: 150,
+    message: 'Demasiados intentos de registro desde esta red. Probá de nuevo en 15 minutos.',
     standardHeaders: true,
     legacyHeaders: false,
 });
 
-// Más agresivo que login porque cada hit dispara un email de verificación
-// real (gasto de cuota Resend). 3/15min por IP cubre el caso legítimo
-// (usuario que necesita reintentar 1-2 veces porque el primer envío llegó a
-// spam o tipeó mal y rehace el flujo).
+// Por EMAIL (no IP). 3/15min por dirección de correo. Defensa contra abuso
+// del reenvío de verificación: un atacante con una sola dirección no puede
+// pedir más de 3 reenvíos por 15min, sin importar desde dónde llame.
+// Empleados legítimos en la misma WiFi corporativa no se bloquean entre sí
+// porque cada uno tiene su propio email.
 export const resendVerificationLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 3,
-    message: 'Demasiados intentos de reenvío. Probá de nuevo en 15 minutos.',
+    keyGenerator: emailKey,
+    message: 'Demasiados intentos de reenvío para este correo. Probá de nuevo en 15 minutos.',
     standardHeaders: true,
     legacyHeaders: false,
 });
 
-// Mucho más agresivo que login porque cada hit dispara un envío de email
-// real (gasto de cuota Resend) y no requiere nada del lado del usuario para
-// abusarlo. 5/15min por IP es suficiente para casos legítimos.
+// Por EMAIL (no IP), mismo razonamiento que resendVerification. 5/15min
+// cubre el flujo legítimo (usuario que pide reset, no le llega o se le
+// vence el link, pide otro). Atacante anónimo necesita conocer N emails
+// distintos para mandar N x 5 resets en 15min — barrera real.
 export const forgotPasswordLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     limit: 5,
-    message: 'Demasiados intentos de recuperación de contraseña. Probá de nuevo en 15 minutos.',
+    keyGenerator: emailKey,
+    message: 'Demasiados intentos de recuperación para este correo. Probá de nuevo en 15 minutos.',
     standardHeaders: true,
     legacyHeaders: false,
 });
