@@ -5,6 +5,39 @@ import logger from '../utils/logger';
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
+// ─── Daily email quota guard ────────────────────────────────────────────────
+// Defensa de último recurso contra abuso del envío masivo de emails. Cuenta
+// envíos en una ventana móvil de 24 hs y rechaza nuevos envíos cuando se
+// supera el techo. Aún si el atacante viene desde 100 IPs distintas (esquiva
+// el rate limit por IP), nunca podemos enviar más de MAX_EMAILS_PER_DAY
+// emails en 24 hs.
+//
+// Cap configurable vía MAX_EMAILS_PER_DAY env var. Default 300, calculado
+// como 1.5x el peor escenario realista (200 empleados auto-registrándose +
+// margen para resends y resets legítimos en el peor día).
+//
+// Limitación conocida: in-memory por proceso. Si Railway escala a múltiples
+// réplicas (no es el caso hoy con plan Hobby), el cap efectivo se multiplica
+// por N réplicas. Para mover esto a DB hace falta una tabla nueva — defensa
+// suficiente para esta etapa.
+const MAX_EMAILS_PER_DAY = Number(process.env.MAX_EMAILS_PER_DAY || '300');
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const sentEmailTimestamps: number[] = [];
+
+function isDailyQuotaExceeded(): boolean {
+    const now = Date.now();
+    const cutoff = now - ONE_DAY_MS;
+    // Drop expired timestamps (rolling window).
+    while (sentEmailTimestamps.length > 0 && sentEmailTimestamps[0] < cutoff) {
+        sentEmailTimestamps.shift();
+    }
+    return sentEmailTimestamps.length >= MAX_EMAILS_PER_DAY;
+}
+
+function recordEmailSent(): void {
+    sentEmailTimestamps.push(Date.now());
+}
+
 function createTransport() {
     if (!SMTP.host) return null;
     return nodemailer.createTransport({
@@ -108,6 +141,14 @@ export const sendAdminCreatedUserEmail = async (user: { name: string; email: str
 };
 
 async function sendEmail(to: string, subject: string, text: string, html: string) {
+    // Hard ceiling: refuse to send if the rolling 24h quota is exhausted.
+    // Only enforced in production so dev/test runs don't trip on the
+    // counter accumulating across many test cases.
+    if (NODE_ENV === 'production' && isDailyQuotaExceeded()) {
+        logger.error(`[Email Service] DAILY QUOTA EXCEEDED (${MAX_EMAILS_PER_DAY} emails/24h). Refusing to send to ${to} (${subject}). Possible abuse — investigar logs y considerar bloqueo manual.`);
+        return false;
+    }
+
     if (resend) {
         try {
             const { data, error } = await resend.emails.send({
@@ -119,6 +160,7 @@ async function sendEmail(to: string, subject: string, text: string, html: string
             if (error) {
                 logger.error(`[Email Service] Resend error for ${to} (${subject}):`, error);
             } else {
+                recordEmailSent();
                 logger.info(`[Email Service] Sent email via Resend to ${to} (${subject}). id=${data?.id}`);
                 return true;
             }
@@ -136,6 +178,7 @@ async function sendEmail(to: string, subject: string, text: string, html: string
                 text,
                 html
             });
+            recordEmailSent();
             logger.info(`[Email Service] Sent email via SMTP to ${to}: ${subject}`);
             return true;
         } catch (err) {

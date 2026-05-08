@@ -8,6 +8,7 @@ vi.mock('../src/middleware/rateLimiter', () => ({
   loginLimiter: (req: any, res: any, next: any) => next(),
   forgotPasswordLimiter: (req: any, res: any, next: any) => next(),
   resendVerificationLimiter: (req: any, res: any, next: any) => next(),
+  registerLimiter: (req: any, res: any, next: any) => next(),
   apiLimiter: (req: any, res: any, next: any) => next()
 }));
 

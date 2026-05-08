@@ -10,6 +10,19 @@ export const loginLimiter = rateLimit({
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+// Por IP. Cada registro exitoso dispara un email de verificación, así que
+// sin esto un atacante puede registrar cuentas falsas y consumir cuota
+// Resend hasta hacernos pagar. 5/15min cubre el caso legítimo (200
+// empleados se auto-registran el 11-14/5; ningún humano necesita 5
+// registros en 15 min).
+export const registerLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    message: 'Demasiados intentos de registro desde esta IP. Probá de nuevo en 15 minutos.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Más agresivo que login porque cada hit dispara un email de verificación
 // real (gasto de cuota Resend). 3/15min por IP cubre el caso legítimo
 // (usuario que necesita reintentar 1-2 veces porque el primer envío llegó a
