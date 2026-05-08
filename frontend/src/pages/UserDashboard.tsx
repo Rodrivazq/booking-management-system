@@ -278,7 +278,7 @@ export default function UserDashboard() {
                             <h3 style={{ margin: 0 }}>Menú no configurado</h3>
                             <span className="badge badge-warning" style={{ backgroundColor: '#f59e0b', color: 'white' }}>Sin menú</span>
                         </div>
-                        <p className="muted">El administrador aún no ha cargado los platos para esta semana. Por favor, vuelve a revisar más tarde.</p>
+                        <p className="muted">El administrador todavía no cargó los platos para esta semana. Volvé a revisar más tarde.</p>
                     </div>
                 ) : myRes ? (
                     <div className="card" style={{ borderLeft: '4px solid var(--accent)', backgroundColor: 'rgba(22, 163, 74, 0.05)' }}>
@@ -489,8 +489,8 @@ export default function UserDashboard() {
                             <div className="meal-feedback-header">
                                 <div>
                                     <span className="meal-feedback-kicker">Calidad del menu</span>
-                                    <h3>¿Como estuvo esta semana?</h3>
-                                    <p>Ayuda a mejorar las proximas propuestas calificando solo lo que ya probaste.</p>
+                                    <h3>¿Cómo estuvo esta semana?</h3>
+                                    <p>Ayudá a mejorar las próximas propuestas calificando solo lo que ya probaste.</p>
                                 </div>
                                 <div className="meal-feedback-summary">
                                     <strong>{currentRes.selections.length}</strong>
@@ -527,7 +527,7 @@ export default function UserDashboard() {
                         <h3 id="rating-reminder-title">No olvides calificar tus comidas</h3>
                         <p>
                             Al finalizar cada dia reservado, entra en Semana Actual y marca si la comida
-                            y el postre te gustaron. Esa informacion ayuda a mejorar el menu de todos.
+                            y el postre te gustaron. Esa información ayuda a mejorar el menú de todos.
                         </p>
                         <div className="rating-reminder-actions">
                             <button
@@ -556,9 +556,9 @@ export default function UserDashboard() {
 }
 
 const RATING_OPTIONS: Array<{ value: string; label: string; tone: string }> = [
-    { value: 'liked', label: 'Me gusto', tone: 'positive' },
+    { value: 'liked', label: 'Me gustó', tone: 'positive' },
     { value: 'neutral', label: 'Regular', tone: 'neutral' },
-    { value: 'disliked', label: 'No gusto', tone: 'negative' },
+    { value: 'disliked', label: 'No me gustó', tone: 'negative' },
 ]
 
 function RatingSection({
@@ -588,8 +588,8 @@ function RatingSection({
     if (rateableDays.length === 0) {
         return (
             <div className="meal-feedback-empty">
-                <strong>Aun no hay platos para calificar</strong>
-                <p>La calificacion se habilita al finalizar cada dia reservado.</p>
+                <strong>Aún no hay platos para calificar</strong>
+                <p>La calificación se habilita al finalizar cada día reservado.</p>
             </div>
         )
     }

@@ -651,10 +651,10 @@ export default function AdminDashboard() {
                                     <div className="grid-2" style={{ gap: '1rem' }}>
                                         <input className="input" placeholder="Nombre Completo" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
                                         <input className="input" placeholder="Email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
-                                        <input className="input" placeholder="Contrasena" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+                                        <input className="input" placeholder="Contraseña" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
                                         <input className="input" inputMode="numeric" placeholder="Nro Funcionario" value={newUser.funcNumber} onChange={e => setNewUser({ ...newUser, funcNumber: e.target.value.replace(/\D/g, '') })} />
                                         <input className="input" inputMode="numeric" placeholder="Documento (DNI)" value={newUser.documentId} onChange={e => setNewUser({ ...newUser, documentId: e.target.value.replace(/\D/g, '') })} />
-                                        <input className="input" placeholder="Telefono (Opcional)" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
+                                        <input className="input" placeholder="Teléfono (Opcional)" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
                                         <select className="input" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value as any })}>
                                             <option value="user">Usuario</option>
                                             {(currentUser?.role === 'superadmin' || currentUser?.role === 'admin') && <option value="admin">Administrador</option>}
@@ -706,8 +706,8 @@ export default function AdminDashboard() {
                             )}
                         <div className="admin-panel admin-qr-panel">
                             <div>
-                                <h3>Codigo QR de Acceso</h3>
-                                <p className="muted">Escanea este codigo para acceder a la aplicacion desde el movil.</p>
+                                <h3>Código QR de Acceso</h3>
+                                <p className="muted">Escaneá este código para acceder a la aplicación desde el móvil.</p>
                             </div>
                             <div className="admin-qr-box">
                                 {qr ? <img src={qr} alt="QR Code" /> : <Skeleton width="200px" height="200px" />}
@@ -1427,7 +1427,7 @@ function UserRow({
                             className="input"
                             value={formData.phoneNumber}
                             onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })}
-                            placeholder="Telefono"
+                            placeholder="Teléfono"
                         />
                         <div className="grid-2" style={{ gap: '0.5rem' }}>
                             <button className="btn btn-sm btn-primary" onClick={handleSave}>Guardar</button>
