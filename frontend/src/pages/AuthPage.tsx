@@ -120,7 +120,7 @@ export default function AuthPage() {
                 setFormData(prev => ({ ...prev, password: '', confirmPassword: '', confirmEmail: '' }))
             }
         } catch (err: any) {
-            setError(err.message || 'Error de autenticacion')
+            setError(err.message || 'Error de autenticación')
         } finally {
             setLoading(false)
         }
@@ -575,7 +575,7 @@ export default function AuthPage() {
 
                 <div style={{ marginTop: '2rem', textAlign: 'center' }}>
                     <p className="muted" style={{ fontSize: '0.95rem', marginBottom: '0.75rem' }}>
-                        {isLogin ? '¿Es tu primera vez?' : '¿Ya tenés cuenta?'}
+                        {isLogin ? '¿Necesitás registrarte?' : '¿Ya tenés cuenta?'}
                     </p>
                     <button
                         type="button"

@@ -79,9 +79,9 @@ export default function HelpModal({ role, isOpen, onClose }: HelpModalProps) {
                 return (
                     <div className="help-section">
                         <h3>Modificar reserva</h3>
-                        <p>Si te equivocaste o cambiaste de opinión, puedes modificar tu pedido.</p>
+                        <p>Si te equivocaste o cambiaste de opinión, podés modificar tu pedido.</p>
                         <ul className="help-step-list">
-                            <li>Mientras la ventana de reservas esté abierta, puedes cambiar tus selecciones en cualquier momento.</li>
+                            <li>Mientras la ventana de reservas esté abierta, podés cambiar tus selecciones en cualquier momento.</li>
                             <li>Al hacer clic en <strong>Modificar Reserva</strong>, tu pedido anterior se actualizará automáticamente.</li>
                             <li>El sistema reemplaza tus datos, <strong>no genera reservas duplicadas</strong>.</li>
                         </ul>
@@ -95,8 +95,8 @@ export default function HelpModal({ role, isOpen, onClose }: HelpModalProps) {
                             <strong>Atención:</strong> Las reservas para la próxima semana cierran automáticamente los días <strong>{deadlineDayName} a las {settings?.deadlineTime || '23:59'}</strong>.
                         </div>
                         <ul className="help-step-list">
-                            <li>La aplicación siempre te avisará visualmente si la ventana está abierta o cerrada.</li>
-                            <li>Una vez pasado el cierre, ya no podrás modificar ni agregar reservas para esa semana.</li>
+                            <li>La aplicación siempre te avisa visualmente si la ventana está abierta o cerrada.</li>
+                            <li>Una vez pasado el cierre, ya no vas a poder modificar ni agregar reservas para esa semana.</li>
                         </ul>
                     </div>
                 )
@@ -106,19 +106,19 @@ export default function HelpModal({ role, isOpen, onClose }: HelpModalProps) {
                         <h3>Problemas frecuentes</h3>
                         <div className="help-card">
                             <strong>"El menú aparece como No disponible"</strong>
-                            <p className="muted">El administrador aún no ha cargado los platos para esa semana. Vuelve a revisar más tarde.</p>
+                            <p className="muted">El administrador todavía no cargó los platos para esa semana. Volvé a revisar más tarde.</p>
                         </div>
                         <div className="help-card">
                             <strong>"No puedo guardar mi reserva"</strong>
-                            <p className="muted">Revisa que hayas seleccionado Comida y Postre para todos los días hábiles, y no olvides elegir un Horario de retiro.</p>
+                            <p className="muted">Revisá que hayas seleccionado Comida y Postre para todos los días hábiles, y no olvides elegir un Horario de retiro.</p>
                         </div>
                         <div className="help-card">
                             <strong>"No puedo modificar mi reserva"</strong>
-                            <p className="muted">Es probable que la ventana de tiempo ya haya cerrado. Contacta al administrador si necesitas un cambio urgente.</p>
+                            <p className="muted">Es probable que la ventana de tiempo ya haya cerrado. Contactá al administrador si necesitás un cambio urgente.</p>
                         </div>
                         <div className="help-card">
                             <strong>"Mis datos o contraseña están mal"</strong>
-                            <p className="muted">Debes contactar al administrador del sistema para que restablezca o actualice tus datos desde el panel.</p>
+                            <p className="muted">Tenés que contactar al administrador del sistema para que restablezca o actualice tus datos desde el panel.</p>
                         </div>
                     </div>
                 )
@@ -128,12 +128,12 @@ export default function HelpModal({ role, isOpen, onClose }: HelpModalProps) {
                 return (
                     <div className="help-section">
                         <h3>Gestión de Reservas</h3>
-                        <p>Desde el panel principal puedes monitorear todos los pedidos de los funcionarios.</p>
+                        <p>Desde el panel principal podés monitorear todos los pedidos de los funcionarios.</p>
                         <ul className="help-step-list">
-                            <li><strong>Pestañas temporales:</strong> Alterna entre Semana Actual, Próxima Semana o el Historial completo.</li>
-                            <li><strong>Buscador:</strong> Usa el campo de búsqueda rápida para filtrar por nombre o número de funcionario.</li>
-                            <li><strong>Detalle:</strong> Haz clic en cualquier reserva para expandir y ver exactamente qué pidió cada día.</li>
-                            <li><strong>Sin reserva:</strong> Revisa qué usuarios aún no han hecho su pedido para enviarles un recordatorio.</li>
+                            <li><strong>Pestañas temporales:</strong> Alterná entre Semana Actual, Próxima Semana o el Historial completo.</li>
+                            <li><strong>Buscador:</strong> Usá el campo de búsqueda rápida para filtrar por nombre o número de funcionario.</li>
+                            <li><strong>Detalle:</strong> Hacé clic en cualquier reserva para expandir y ver exactamente qué pidió cada día.</li>
+                            <li><strong>Sin reserva:</strong> Revisá qué usuarios todavía no hicieron su pedido para enviarles un recordatorio.</li>
                         </ul>
                     </div>
                 )
@@ -143,11 +143,11 @@ export default function HelpModal({ role, isOpen, onClose }: HelpModalProps) {
                         <h3>Menú semanal</h3>
                         <p>Configurar el menú es indispensable para que los usuarios puedan reservar.</p>
                         <ol className="help-step-list">
-                            <li>Ve a la pestaña <strong>Menú Semanal</strong>.</li>
-                            <li>Para cada día, escribe los platos principales separados por comas.</li>
-                            <li>Haz lo mismo para los postres.</li>
-                            <li>Activa o desactiva la opción de "Pan disponible" para esa semana.</li>
-                            <li>¡Importante! Haz clic en <strong>Guardar Menú</strong> al terminar.</li>
+                            <li>Andá a la pestaña <strong>Menú Semanal</strong>.</li>
+                            <li>Para cada día, escribí los platos principales separados por comas.</li>
+                            <li>Hacé lo mismo para los postres.</li>
+                            <li>Activá o desactivá la opción de "Pan disponible" para esa semana.</li>
+                            <li>¡Importante! Hacé clic en <strong>Guardar Menú</strong> al terminar.</li>
                         </ol>
                         <div className="help-callout error">
                             <strong>Error común:</strong> Si el menú se deja en blanco, a los usuarios les aparecerá "Menú no disponible" y no podrán operar.
