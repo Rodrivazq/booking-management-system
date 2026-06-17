@@ -19,6 +19,10 @@ model User {
   phoneNumber  String?
   photoUrl     String?
   preferences  String?
+  // Lunes (YYYY-MM-DD) de la semana en curso habilitada por un admin para que
+  // este usuario pueda reservar fuera de la ventana normal (alta a mitad de
+  // semana). Se "vence" solo: deja de aplicar cuando cambia la semana.
+  reservationOverrideWeek String?
   isEmailVerified Boolean @default(false)
   verificationToken String? @unique
   createdAt    DateTime @default(now())

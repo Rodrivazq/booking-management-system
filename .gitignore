@@ -47,6 +47,9 @@ backups/
 *.dump
 *.sql
 *.backup
+# Excepción: las migraciones de Prisma SÍ deben versionarse (sin esto, el deploy
+# no aplicaría los cambios de esquema en producción).
+!backend/prisma/migrations/**/*.sql
 
 # --- 9. Demo seed manifest (artefacto local de rollback, no commitear) ---
 backend/.demo-manifest.json

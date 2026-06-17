@@ -427,6 +427,22 @@ export default function AdminDashboard() {
         }
     }
 
+    // Habilita/deshabilita a un usuario a reservar la semana en curso.
+    const toggleReservationOverride = async (enable: boolean) => {
+        if (!selectedUserForModal) return
+        try {
+            const r = await apiFetch<{ reservationOverrideWeek: string | null }>(`/api/admin/users/${selectedUserForModal.id}/reservation-override`, {
+                method: 'PUT',
+                body: JSON.stringify({ enable }),
+            })
+            setSelectedUserForModal({ ...selectedUserForModal, reservationOverrideWeek: r.reservationOverrideWeek })
+            success(enable ? 'Habilitado para reservar la semana actual.' : 'Permiso de esta semana quitado.')
+            loadData()
+        } catch (e: any) {
+            error(e.message || 'No se pudo actualizar el permiso')
+        }
+    }
+
     const getDailyTotals = (dayStats: any) => {
         const totals = { meals: {} as Record<string, number>, desserts: {} as Record<string, number>, bread: 0 }
         Object.values(dayStats).forEach((slot: any) => {
@@ -1600,6 +1616,28 @@ export default function AdminDashboard() {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Habilitar reserva de la semana en curso (altas a mitad de semana) */}
+                            {selectedUserForModal.role === 'user' && (() => {
+                                const currentMonday = menuData?.current?.weekStart
+                                const enabled = !!currentMonday && selectedUserForModal.reservationOverrideWeek === currentMonday
+                                return (
+                                    <div style={{ width: '100%', background: enabled ? 'var(--success-bg)' : 'var(--bg)', border: `1px solid ${enabled ? 'var(--success-border)' : 'var(--border)'}`, borderRadius: '0.5rem', padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                        <div>
+                                            <strong style={{ fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Icon name="calendar" size={15} /> Reserva de la semana actual</strong>
+                                            <p className="muted" style={{ margin: '0.15rem 0 0', fontSize: '0.8rem' }}>
+                                                {enabled ? 'Habilitado: puede elegir el menú de la semana en curso.' : 'Para altas a mitad de semana: permitile reservar esta semana fuera del cierre.'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            className={`btn btn-sm ${enabled ? 'btn-secondary' : 'btn-primary'}`}
+                                            onClick={() => toggleReservationOverride(!enabled)}
+                                        >
+                                            {enabled ? 'Quitar permiso' : 'Habilitar esta semana'}
+                                        </button>
+                                    </div>
+                                )
+                            })()}
 
                             {/* Perfil de gustos del usuario */}
                             <div style={{ width: '100%' }}>

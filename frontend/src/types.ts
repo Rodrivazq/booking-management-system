@@ -10,6 +10,7 @@ export interface User {
   preferences?: {
     theme?: 'light' | 'dark'
   }
+  reservationOverrideWeek?: string | null
   lastReservation?: string
 }
 

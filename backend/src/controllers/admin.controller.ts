@@ -5,6 +5,30 @@ import prisma from '../utils/prisma';
 import logger from '../utils/logger';
 import { sendAdminCreatedUserEmail } from '../services/email.service';
 import { validateImageUrl } from '../utils/validators';
+import { getCurrentMonday } from '../utils/dates';
+
+// PUT /api/admin/users/:userId/reservation-override — habilita/deshabilita a un
+// usuario a reservar la SEMANA EN CURSO fuera de la ventana normal (alta a
+// mitad de semana). Guarda el lunes en curso; se vence solo al cambiar la semana.
+export const setReservationOverride = async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { enable } = req.body || {};
+    try {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        const value = enable ? getCurrentMonday() : null;
+        const updated = await prisma.user.update({
+            where: { id: userId },
+            data: { reservationOverrideWeek: value },
+            select: { id: true, reservationOverrideWeek: true },
+        });
+        res.json({ ok: true, reservationOverrideWeek: updated.reservationOverrideWeek });
+    } catch (error) {
+        console.error('setReservationOverride error:', error);
+        res.status(500).json({ error: 'Error al actualizar el permiso de reserva' });
+    }
+};
 
 // GET /api/admin/users/overview — métricas agregadas de usuarios para el panel
 // de inicio de la pestaña Usuarios.

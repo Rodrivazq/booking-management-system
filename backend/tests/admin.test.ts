@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { changeUserRole, createUser, updateUserDetails } from '../src/controllers/admin.controller';
+import { changeUserRole, createUser, updateUserDetails, setReservationOverride } from '../src/controllers/admin.controller';
 
 vi.mock('../src/services/email.service', () => ({
   sendAdminCreatedUserEmail: vi.fn().mockResolvedValue(true)
@@ -592,5 +592,42 @@ describe('importUsers', () => {
         await importUsers(reqOversize, resOversize);
         expect(resOversize.status).toHaveBeenCalledWith(400);
         expect(prismaMock.user.create).not.toHaveBeenCalled();
+    });
+});
+
+describe('setReservationOverride', () => {
+    beforeEach(() => { vi.clearAllMocks(); });
+
+    it('habilita: guarda un lunes (YYYY-MM-DD)', async () => {
+        prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
+        prismaMock.user.update.mockResolvedValue({ id: 'u1', reservationOverrideWeek: '2026-06-15' } as any);
+
+        const req = { params: { userId: 'u1' }, body: { enable: true } } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+        await setReservationOverride(req, res);
+
+        const updateArg = prismaMock.user.update.mock.calls[0][0] as any;
+        expect(updateArg.data.reservationOverrideWeek).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true }));
+    });
+
+    it('deshabilita: setea null', async () => {
+        prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
+        prismaMock.user.update.mockResolvedValue({ id: 'u1', reservationOverrideWeek: null } as any);
+
+        const req = { params: { userId: 'u1' }, body: { enable: false } } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+        await setReservationOverride(req, res);
+
+        const updateArg = prismaMock.user.update.mock.calls[0][0] as any;
+        expect(updateArg.data.reservationOverrideWeek).toBeNull();
+    });
+
+    it('responde 404 si el usuario no existe', async () => {
+        prismaMock.user.findUnique.mockResolvedValue(null as any);
+        const req = { params: { userId: 'x' }, body: { enable: true } } as any;
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+        await setReservationOverride(req, res);
+        expect(res.status).toHaveBeenCalledWith(404);
     });
 });

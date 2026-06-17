@@ -21,6 +21,7 @@ interface ReservationWindow {
     isReservationOpen: boolean
     activeWeek: string
     reason: string
+    overrideWeek?: string | null
 }
 
 // Shape returned by GET /api/ratings/pending — platos ya servidos sin calificar
@@ -146,7 +147,9 @@ export default function UserDashboard() {
 
         setLoading(true)
         try {
-            const targetDate = window_.activeWeek
+            // Si está editando la semana actual (habilitado por admin), el destino
+            // es la semana en curso; si no, la semana activa normal.
+            const targetDate = viewMode === 'current' ? dates.current : window_.activeWeek
             const payload = {
                 weekStart: targetDate,
                 timeSlot,
@@ -293,13 +296,20 @@ export default function UserDashboard() {
     const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
     const deadlineName = dayNames[deadlineDay]
 
-    // User can edit only the next week while reservations are open AND if the menu exists
-    const canEdit = viewMode === 'next' && isReservationOpen && !!activeMenu
+    // ¿Un admin habilitó a este usuario a reservar la semana en curso?
+    const overrideCurrent = !!window_.overrideWeek && window_.overrideWeek === dates.current
+
+    // Edita la próxima semana (con reservas abiertas) o la actual si fue habilitado.
+    const canEdit = (viewMode === 'next' && isReservationOpen && !!activeMenu)
+        || (viewMode === 'current' && overrideCurrent && !!activeMenu)
 
     // Status badge
     let statusMessage = ''
     let statusColor = ''
-    if (viewMode === 'current') {
+    if (viewMode === 'current' && overrideCurrent && activeMenu) {
+        statusMessage = 'Habilitado para reservar esta semana'
+        statusColor = 'badge-success'
+    } else if (viewMode === 'current') {
         statusMessage = 'Semana en curso (Solo lectura)'
         statusColor = 'badge-gray'
     } else if (!activeMenu) {

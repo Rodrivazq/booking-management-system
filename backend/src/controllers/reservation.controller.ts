@@ -53,10 +53,19 @@ export async function computeWindowStatus() {
 // ---------------------------------------------------------------------------
 // GET /api/reservations/window  — authoritative open/closed status
 // ---------------------------------------------------------------------------
-export const getReservationWindow = async (_req: Request, res: Response) => {
+export const getReservationWindow = async (req: Request, res: Response) => {
     try {
         const window = await computeWindowStatus();
-        res.json(window);
+        // ¿Este usuario tiene habilitada la semana en curso por un admin?
+        let overrideWeek: string | null = null;
+        if (req.user?.id) {
+            const me = await prisma.user.findUnique({
+                where: { id: req.user.id },
+                select: { reservationOverrideWeek: true },
+            });
+            overrideWeek = me?.reservationOverrideWeek || null;
+        }
+        res.json({ ...window, overrideWeek });
     } catch (error) {
         console.error('getReservationWindow error:', error);
         res.status(500).json({ error: 'Error al obtener estado de reservas' });
@@ -73,14 +82,29 @@ export const createReservation = async (req: Request, res: Response) => {
         // 1. Get the authoritative window status
         const window = await computeWindowStatus();
 
-        if (weekStart !== window.activeWeek) {
-            return res.status(400).json({
-                error: `Las reservas solo se pueden hacer para la semana que inicia el ${window.activeWeek}.`
-            });
-        }
+        // ¿El usuario tiene habilitada la semana EN CURSO por un admin?
+        const me = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { reservationOverrideWeek: true },
+        });
+        const hasOverride = !!me?.reservationOverrideWeek
+            && me.reservationOverrideWeek === window.currentMonday
+            && weekStart === window.currentMonday;
 
-        if (!window.isReservationOpen) {
-            return res.status(400).json({ error: window.reason });
+        // Semana objetivo: la habilitada (semana en curso) o la activa normal.
+        let targetWeek: string;
+        if (hasOverride) {
+            targetWeek = window.currentMonday;
+        } else {
+            if (weekStart !== window.activeWeek) {
+                return res.status(400).json({
+                    error: `Las reservas solo se pueden hacer para la semana que inicia el ${window.activeWeek}.`
+                });
+            }
+            if (!window.isReservationOpen) {
+                return res.status(400).json({ error: window.reason });
+            }
+            targetWeek = window.activeWeek;
         }
 
         // 2. Validate payload shape
@@ -91,10 +115,10 @@ export const createReservation = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Horario no válido.' });
         }
 
-        // 3. Validate selections against the actual menu
-        const nextMenu = await prisma.weeklyMenu.findUnique({ where: { weekStart: window.activeWeek } });
+        // 3. Validate selections against the actual menu (de la semana objetivo)
+        const nextMenu = await prisma.weeklyMenu.findUnique({ where: { weekStart: targetWeek } });
         if (!nextMenu) {
-            return res.status(500).json({ error: `Menú no configurado para la semana ${window.activeWeek}.` });
+            return res.status(500).json({ error: `Menú no configurado para la semana ${targetWeek}.` });
         }
         const menuDays: any = JSON.parse(nextMenu.days as string);
 
@@ -119,7 +143,7 @@ export const createReservation = async (req: Request, res: Response) => {
             where: {
                 userId_weekStart: {
                     userId: req.user.id,
-                    weekStart: window.activeWeek,
+                    weekStart: targetWeek,
                 },
             },
             update: {
@@ -129,13 +153,13 @@ export const createReservation = async (req: Request, res: Response) => {
             },
             create: {
                 userId: req.user.id,
-                weekStart: window.activeWeek,
+                weekStart: targetWeek,
                 selections: JSON.stringify(normalizedSel),
                 timeSlot,
             },
         });
 
-        res.json({ ok: true, weekStart: window.activeWeek });
+        res.json({ ok: true, weekStart: targetWeek });
     } catch (error) {
         console.error('Create reservation error:', error);
         res.status(500).json({ error: 'Error al procesar reserva.' });
@@ -209,6 +233,7 @@ export const getAllReservations = async (req: Request, res: Response) => {
                 phoneNumber: u.phoneNumber,
                 role: u.role,
                 photoUrl: u.photoUrl,
+                reservationOverrideWeek: u.reservationOverrideWeek,
                 lastReservation: u.reservations[0]?.weekStart || null
             }));
 

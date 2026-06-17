@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
 import { createReservation, getUsersWithoutReservation, computeWindowStatus } from '../src/controllers/reservation.controller';
-import { getNextMonday } from '../src/utils/dates';
+import { getNextMonday, getCurrentMonday } from '../src/utils/dates';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -209,6 +209,44 @@ describe('createReservation', () => {
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({ error: expect.stringContaining('selección para cada día') })
         );
+    });
+
+    // ── Override: alta a mitad de semana ──────────────────────────────────
+    it('permite reservar la semana EN CURSO si el usuario fue habilitado', async () => {
+        const currentMonday = getCurrentMonday();
+        const { req, res } = makeReqRes({
+            weekStart: currentMonday,
+            timeSlot: '12:00',
+            selections: validSelections(),
+        });
+        prismaMock.settings.findUnique.mockResolvedValue(openSettings() as any);
+        prismaMock.user.findUnique.mockResolvedValue({ reservationOverrideWeek: currentMonday } as any);
+        prismaMock.weeklyMenu.findUnique.mockResolvedValue(validMenu() as any);
+        prismaMock.reservation.upsert.mockResolvedValue(savedReservation() as any);
+
+        await createReservation(req, res);
+
+        expect(prismaMock.reservation.upsert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: { userId_weekStart: { userId: 'user-123', weekStart: currentMonday } },
+            })
+        );
+        expect(res.json).toHaveBeenCalledWith({ ok: true, weekStart: currentMonday });
+    });
+
+    it('rechaza la semana en curso si el usuario NO fue habilitado', async () => {
+        const currentMonday = getCurrentMonday();
+        const { req, res } = makeReqRes({
+            weekStart: currentMonday,
+            timeSlot: '12:00',
+            selections: validSelections(),
+        });
+        prismaMock.settings.findUnique.mockResolvedValue(openSettings() as any);
+        prismaMock.user.findUnique.mockResolvedValue({ reservationOverrideWeek: null } as any);
+
+        await createReservation(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
     });
 });
 

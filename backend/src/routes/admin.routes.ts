@@ -5,6 +5,7 @@ import { authMiddleware, requireAdmin, requireSuperAdmin } from '../middleware/a
 const router = express.Router();
 
 router.get('/users/overview', authMiddleware, requireAdmin, adminController.getUsersOverview);
+router.put('/users/:userId/reservation-override', authMiddleware, requireAdmin, adminController.setReservationOverride);
 router.put('/users/:userId/details', authMiddleware, requireAdmin, adminController.updateUserDetails);
 router.put('/users/:userId/role', authMiddleware, requireSuperAdmin, adminController.changeUserRole);
 router.post('/users', authMiddleware, requireAdmin, adminController.createUser);
