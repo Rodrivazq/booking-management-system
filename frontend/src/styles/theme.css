@@ -22,6 +22,14 @@
   --success-text: #166534;
   --success-border: #bbf7d0;
 
+  /* Rating semantics (Light) — usadas por reportes/calificaciones */
+  --rating-liked: #16a34a;
+  --rating-liked-bg: rgba(22, 163, 74, 0.12);
+  --rating-neutral: #b45309;
+  --rating-neutral-bg: rgba(245, 158, 11, 0.14);
+  --rating-disliked: #dc2626;
+  --rating-disliked-bg: rgba(220, 38, 38, 0.12);
+
   /* Accent remains constant or adapts slightly */
   --accent: #16a34a;
   --accent-hover: #15803d;
@@ -59,6 +67,14 @@
   --success-bg: rgba(20, 83, 45, 0.2);
   --success-text: #86efac;
   --success-border: rgba(20, 83, 45, 0.5);
+
+  /* Rating semantics (Dark) — mayor contraste sobre fondo oscuro */
+  --rating-liked: #4ade80;
+  --rating-liked-bg: rgba(34, 197, 94, 0.18);
+  --rating-neutral: #fbbf24;
+  --rating-neutral-bg: rgba(245, 158, 11, 0.18);
+  --rating-disliked: #f87171;
+  --rating-disliked-bg: rgba(220, 38, 38, 0.2);
 
   /* Adjust accents for dark mode visibility */
   --accent: #22c55e;

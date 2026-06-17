@@ -9,6 +9,7 @@ import Layout from '../components/Layout';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useSettings } from '../context/SettingsContext';
 import WeekPicker from '../components/WeekPicker';
+import Icon from '../components/Icon';
 
 interface ReportStats {
     popularDishes: { name: string; count: number }[];
@@ -41,10 +42,11 @@ interface GlobalRatingRow {
 }
 
 // Semantic colors for rating cells (greater contrast in both light and dark modes).
+// Tomados de variables CSS para adaptarse a tema claro/oscuro.
 const RATING_COLORS = {
-    liked:    { bg: 'rgba(22, 163, 74, 0.15)',  text: '#16a34a' },  // verde
-    neutral:  { bg: 'rgba(234, 179, 8, 0.15)',  text: '#a16207' },  // amarillo
-    disliked: { bg: 'rgba(220, 38, 38, 0.15)',  text: '#dc2626' },  // rojo
+    liked:    { bg: 'var(--rating-liked-bg)',    text: 'var(--rating-liked)' },
+    neutral:  { bg: 'var(--rating-neutral-bg)',  text: 'var(--rating-neutral)' },
+    disliked: { bg: 'var(--rating-disliked-bg)', text: 'var(--rating-disliked)' },
 };
 
 const ratingCellStyle = (kind: 'liked' | 'neutral' | 'disliked', value: number): CSSProperties => ({
@@ -472,11 +474,11 @@ export default function ReportsPage() {
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <WeekPicker selectedDate={selectedDate} onChange={setSelectedDate} />
                     <div style={{ display: 'flex', gap: '0.6rem' }}>
-                        <button onClick={exportExcel} className="btn btn-primary" style={{ backgroundColor: '#217346', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            📊 Excel
+                        <button onClick={exportExcel} className="btn btn-primary" style={{ backgroundColor: '#217346', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Icon name="grid" size={16} /> Excel
                         </button>
-                        <button onClick={exportPDF} className="btn btn-primary" style={{ backgroundColor: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            📄 PDF
+                        <button onClick={exportPDF} className="btn btn-primary" style={{ backgroundColor: '#b91c1c', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Icon name="fileText" size={16} /> PDF
                         </button>
                     </div>
                 </div>

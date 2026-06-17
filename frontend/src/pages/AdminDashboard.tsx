@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, Fragment } from 'react'
+import { useEffect, useState, useRef, Fragment, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import WeekPicker from '../components/WeekPicker'
@@ -8,7 +8,8 @@ import { useAuthStore } from '../hooks/useAuthStore'
 import Skeleton from '../components/Skeleton'
 import { useToast } from '../context/ToastContext'
 import AvatarUploader, { type AvatarUploaderHandle } from '../components/AvatarUploader'
-import CsvPreviewPanel from '../components/CsvPreviewPanel'
+import Icon from '../components/Icon'
+import ConfirmDialog, { type ConfirmOptions } from '../components/ConfirmDialog'
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 type UserRole = User['role']
@@ -19,10 +20,10 @@ export default function AdminDashboard() {
     const { success, error } = useToast()
     const currentUser = useAuthStore(s => s.user)
     const [searchParams, setSearchParams] = useSearchParams()
-    const urlTab = searchParams.get('tab') as 'reservations' | 'menu' | 'users' | 'reports' | null
-    const [activeTab, setActiveTabState] = useState<'reservations' | 'menu' | 'users' | 'reports'>(urlTab || 'reservations')
+    const urlTab = searchParams.get('tab') as 'overview' | 'reservations' | 'menu' | 'users' | 'reports' | null
+    const [activeTab, setActiveTabState] = useState<'overview' | 'reservations' | 'menu' | 'users' | 'reports'>(urlTab || 'overview')
 
-    const setActiveTab = (tab: 'reservations' | 'menu' | 'users' | 'reports') => {
+    const setActiveTab = (tab: 'overview' | 'reservations' | 'menu' | 'users' | 'reports') => {
         setActiveTabState(tab)
         setSearchParams({ tab })
     }
@@ -51,6 +52,29 @@ export default function AdminDashboard() {
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedResId, setExpandedResId] = useState<string | null>(null)
     const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null)
+
+    // Confirmación tematizada (reemplaza window.confirm)
+    const [confirmState, setConfirmState] = useState<ConfirmOptions | null>(null)
+    const confirmResolver = useRef<((v: boolean) => void) | null>(null)
+    const requestConfirm = (opts: ConfirmOptions) => new Promise<boolean>(resolve => {
+        confirmResolver.current = resolve
+        setConfirmState(opts)
+    })
+    const resolveConfirm = (result: boolean) => {
+        setConfirmState(null)
+        const r = confirmResolver.current
+        confirmResolver.current = null
+        r?.(result)
+    }
+
+    // Datos del panel de inicio (overview)
+    const [overview, setOverview] = useState<{
+        window: { isReservationOpen: boolean; deadlineDay: number; deadlineTime: string; reason: string; activeWeek: string }
+        totalUsers: number
+        reservedActive: number
+        withoutActive: number
+    } | null>(null)
+    const [overviewLoading, setOverviewLoading] = useState(false)
 
     // Create User State
     const [showCreateUser, setShowCreateUser] = useState(false)
@@ -104,6 +128,32 @@ export default function AdminDashboard() {
             loadStats(selectedWeek)
         }
     }, [selectedWeek, activeTab])
+
+    // Cargar datos del panel de inicio cuando se entra a esa pestaña
+    useEffect(() => {
+        if (activeTab !== 'overview') return
+        let cancelled = false
+        const run = async () => {
+            setOverviewLoading(true)
+            try {
+                const [w, usersRes] = await Promise.all([
+                    apiFetch<{ isReservationOpen: boolean; deadlineDay: number; deadlineTime: string; reason: string; activeWeek: string }>('/api/reservations/window'),
+                    apiFetch<{ total: number }>('/api/reservations/admin?type=users&page=1&limit=1'),
+                ])
+                const [resRes, withoutRes] = await Promise.all([
+                    apiFetch<{ total: number }>(`/api/reservations/admin?week=${encodeURIComponent(w.activeWeek)}&page=1&limit=1`),
+                    apiFetch<{ users: User[] }>(`/api/reservations/admin/without-reservation?week=${encodeURIComponent(w.activeWeek)}`),
+                ])
+                if (!cancelled) setOverview({ window: w, totalUsers: usersRes.total, reservedActive: resRes.total, withoutActive: withoutRes.users.length })
+            } catch (e) {
+                console.error('overview load error', e)
+            } finally {
+                if (!cancelled) setOverviewLoading(false)
+            }
+        }
+        run()
+        return () => { cancelled = true }
+    }, [activeTab])
 
     const loadData = async () => {
         try {
@@ -217,16 +267,26 @@ export default function AdminDashboard() {
         const promotingToSuperAdmin = newRole === 'superadmin'
         const demoting = (currentRole === 'admin' || currentRole === 'superadmin') && newRole === 'user'
 
-        let confirmMsg = `¿Cambiar el rol de "${userName}" de ${currentRole.toUpperCase()} a ${newRole.toUpperCase()}?`
+        let title = 'Cambiar rol'
+        let message = `¿Cambiar el rol de "${userName}" de ${currentRole.toUpperCase()} a ${newRole.toUpperCase()}?`
         if (promotingToSuperAdmin) {
-            confirmMsg = `⚠️ Estás por otorgar privilegios de SUPER ADMIN a "${userName}". Este rol tiene acceso total al sistema. ¿Confirmás?`
+            title = 'Otorgar Super Admin'
+            message = `Estás por otorgar privilegios de SUPER ADMIN a "${userName}". Este rol tiene acceso total al sistema. ¿Confirmás?`
         } else if (promotingToAdmin) {
-            confirmMsg = `Estás por promover a "${userName}" a ADMINISTRADOR. Tendrá acceso al panel de administración. ¿Confirmás?`
+            title = 'Promover a administrador'
+            message = `Estás por promover a "${userName}" a ADMINISTRADOR. Tendrá acceso al panel de administración. ¿Confirmás?`
         } else if (demoting) {
-            confirmMsg = `Estás por degradar a "${userName}" de ${currentRole.toUpperCase()} a USUARIO. Perderá acceso admin. ¿Confirmás?`
+            title = 'Degradar usuario'
+            message = `Estás por degradar a "${userName}" de ${currentRole.toUpperCase()} a USUARIO. Perderá acceso admin. ¿Confirmás?`
         }
 
-        if (!window.confirm(confirmMsg)) return
+        const ok = await requestConfirm({
+            title,
+            message,
+            confirmLabel: promotingToSuperAdmin ? 'Sí, otorgar' : demoting ? 'Sí, degradar' : 'Confirmar',
+            tone: (promotingToSuperAdmin || demoting) ? 'danger' : 'primary',
+        })
+        if (!ok) return
 
         try {
             await apiFetch(`/api/admin/users/${userId}/role`, {
@@ -260,39 +320,125 @@ export default function AdminDashboard() {
             {/* ── Top Nav ── */}
             <nav className="admin-topnav" role="navigation" aria-label="Secciones del panel">
                 <button
+                    className={`admin-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('overview')}
+                    aria-current={activeTab === 'overview' ? 'page' : undefined}
+                >
+                    <span className="admin-nav-icon"><Icon name="home" /></span> Inicio
+                </button>
+                <button
                     className={`admin-nav-item ${activeTab === 'reservations' ? 'active' : ''}`}
                     onClick={() => setActiveTab('reservations')}
                     aria-current={activeTab === 'reservations' ? 'page' : undefined}
                 >
-                    <span className="admin-nav-icon">📋</span> Reservas
+                    <span className="admin-nav-icon"><Icon name="list" /></span> Reservas
                 </button>
                 <button
                     className={`admin-nav-item ${activeTab === 'menu' ? 'active' : ''}`}
                     onClick={() => setActiveTab('menu')}
                     aria-current={activeTab === 'menu' ? 'page' : undefined}
                 >
-                    <span className="admin-nav-icon">🍽️</span> Menú
+                    <span className="admin-nav-icon"><Icon name="utensils" /></span> Menú
                 </button>
                 <button
                     className={`admin-nav-item ${activeTab === 'users' ? 'active' : ''}`}
                     onClick={() => setActiveTab('users')}
                     aria-current={activeTab === 'users' ? 'page' : undefined}
                 >
-                    <span className="admin-nav-icon">👥</span> Usuarios
+                    <span className="admin-nav-icon"><Icon name="users" /></span> Usuarios
                 </button>
                 <button
                     className={`admin-nav-item ${activeTab === 'reports' ? 'active' : ''}`}
                     onClick={() => setActiveTab('reports')}
                     aria-current={activeTab === 'reports' ? 'page' : undefined}
                 >
-                    <span className="admin-nav-icon">📊</span> Reportes
+                    <span className="admin-nav-icon"><Icon name="barChart" /></span> Reportes
                 </button>
                 {currentUser?.role === 'superadmin' && (
                     <button className="admin-nav-item" onClick={() => navigate('/admin/settings')}>
-                        <span className="admin-nav-icon">⚙️</span> Configuración
+                        <span className="admin-nav-icon"><Icon name="settings" /></span> Configuración
                     </button>
                 )}
             </nav>
+
+            {activeTab === 'overview' && (
+                <div className="admin-content">
+                    <div className="admin-section-header">
+                        <div>
+                            <p className="admin-section-title">Inicio</p>
+                            <p className="admin-section-subtitle">Resumen operativo del sistema</p>
+                        </div>
+                    </div>
+
+                    {overviewLoading && !overview ? (
+                        <div className="admin-panel"><div className="admin-panel-body"><Skeleton height="90px" /></div></div>
+                    ) : overview && (() => {
+                        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+                        const open = overview.window.isReservationOpen
+                        const nextOk = ((menuData?.next?.days as any)?.lunes?.meals?.length ?? 0) > 0
+
+                        const alerts: Array<{ tone: 'warning' | 'info' | 'success'; text: string; action?: { label: string; tab: 'reservations' | 'menu' } }> = []
+                        if (!nextOk) alerts.push({ tone: 'warning', text: 'El menú de la próxima semana no está configurado. Los usuarios no podrán reservar hasta cargarlo.', action: { label: 'Ir a Menú', tab: 'menu' } })
+                        if (overview.withoutActive > 0 && open) alerts.push({ tone: 'info', text: `${overview.withoutActive} funcionario${overview.withoutActive !== 1 ? 's' : ''} todavía no reservó para la semana activa.`, action: { label: 'Ver reservas', tab: 'reservations' } })
+                        if (!open) alerts.push({ tone: 'info', text: 'La ventana de reservas está cerrada para esta semana.' })
+                        if (alerts.length === 0) alerts.push({ tone: 'success', text: 'Todo en orden: menú cargado y ventana de reservas al día.' })
+
+                        const toneColor = (t: string) => t === 'warning' ? 'var(--warning-text)' : t === 'success' ? 'var(--rating-liked)' : 'var(--accent)'
+                        const toneBg = (t: string) => t === 'warning' ? 'var(--warning-bg)' : t === 'success' ? 'var(--success-bg)' : 'var(--accent-light)'
+
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                {/* Estado de la ventana de reservas */}
+                                <div className="admin-panel" style={{ borderLeft: `4px solid ${open ? 'var(--rating-liked)' : 'var(--rating-disliked)'}` }}>
+                                    <div className="admin-panel-body" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                        <span style={{ color: open ? 'var(--rating-liked)' : 'var(--rating-disliked)', display: 'flex' }}><Icon name="clock" size={28} /></span>
+                                        <div style={{ flex: 1, minWidth: '200px' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)' }}>{open ? 'Reservas abiertas' : 'Reservas cerradas'}</div>
+                                            <div className="muted" style={{ fontSize: '0.9rem' }}>{overview.window.reason}</div>
+                                        </div>
+                                        <span className={`badge ${open ? 'badge-success' : 'badge-error'}`}>Cierre: {dayNames[overview.window.deadlineDay]} {overview.window.deadlineTime}</span>
+                                    </div>
+                                </div>
+
+                                {/* KPIs */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                                    <ReportStatTile icon={<Icon name="users" />} label="Usuarios totales" value={overview.totalUsers} accent="#0284c7" />
+                                    <ReportStatTile icon={<Icon name="check" />} label="Reservaron (semana activa)" value={overview.reservedActive} accent="#16a34a" />
+                                    <ReportStatTile icon={<Icon name="alert" />} label="Sin reserva" value={overview.withoutActive} accent={overview.withoutActive > 0 ? '#dc2626' : '#64748b'} />
+                                </div>
+
+                                {/* Alertas */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {alerts.map((a, i) => (
+                                        <div key={i} className="admin-panel" style={{ borderLeft: `4px solid ${toneColor(a.tone)}`, background: toneBg(a.tone) }}>
+                                            <div className="admin-panel-body" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                                                <span style={{ color: toneColor(a.tone), display: 'flex' }}><Icon name={a.tone === 'success' ? 'check' : 'alert'} size={20} /></span>
+                                                <span style={{ flex: 1, minWidth: '200px', color: 'var(--text)', fontSize: '0.92rem' }}>{a.text}</span>
+                                                {a.action && (
+                                                    <button className="btn btn-sm btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => setActiveTab(a.action!.tab)}>
+                                                        {a.action.label} <Icon name="arrowRight" size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Accesos rápidos */}
+                                <div className="admin-panel">
+                                    <div className="admin-panel-header"><span className="admin-panel-title">Accesos rápidos</span></div>
+                                    <div className="admin-panel-body" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                        <button className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }} onClick={() => setActiveTab('reservations')}><Icon name="list" size={16} /> Reservas</button>
+                                        <button className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }} onClick={() => setActiveTab('menu')}><Icon name="utensils" size={16} /> Menú</button>
+                                        <button className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }} onClick={() => setActiveTab('users')}><Icon name="users" size={16} /> Usuarios</button>
+                                        <button className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }} onClick={() => setActiveTab('reports')}><Icon name="barChart" size={16} /> Reportes</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })()}
+                </div>
+            )}
 
             {activeTab === 'reservations' && (
                 <div className="admin-content">
@@ -337,7 +483,7 @@ export default function AdminDashboard() {
                     {![menuData?.current?.weekStart, menuData?.next?.weekStart].includes(selectedWeek) && (
                         <div className="admin-panel">
                             <div className="admin-panel-header">
-                                <span className="admin-panel-title">🗓 Seleccionar semana del historial</span>
+                                <span className="admin-panel-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="calendar" size={17} /> Seleccionar semana del historial</span>
                             </div>
                             <div className="admin-panel-body">
                                 <WeekPicker
@@ -424,7 +570,7 @@ export default function AdminDashboard() {
                                                                         <strong>{s.day}</strong>
                                                                         <div>{s.meal}</div>
                                                                         <div style={{ color: 'var(--text-light)' }}>{s.dessert}</div>
-                                                                        {s.bread && <span className="badge badge-gray" style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>🥖 Pan</span>}
+                                                                        {s.bread && <span className="badge badge-gray" style={{ fontSize: '0.7rem', marginTop: '0.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Icon name="bread" size={12} /> Pan</span>}
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -440,7 +586,7 @@ export default function AdminDashboard() {
 
                         {reservations.length === 0 && (
                             <div className="empty-state">
-                                <div className="empty-state-icon">📋</div>
+                                <div className="empty-state-icon"><Icon name="list" size={36} /></div>
                                 <p className="empty-state-title">Sin reservas</p>
                                 <p className="empty-state-subtitle">No hay reservas registradas para la semana seleccionada.</p>
                             </div>
@@ -460,12 +606,12 @@ export default function AdminDashboard() {
                     {/* Sin reserva panel */}
                     <div className="admin-panel">
                         <div className="admin-panel-header">
-                            <span className="admin-panel-title">⚠️ Sin reserva esta semana</span>
+                            <span className="admin-panel-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="alert" size={17} /> Sin reserva esta semana</span>
                             <span className="badge badge-warning">{usersWithoutReservation.length} funcionario{usersWithoutReservation.length !== 1 ? 's' : ''}</span>
                         </div>
                         {usersWithoutReservation.length === 0 ? (
                             <div className="empty-state" style={{ padding: '1.5rem' }}>
-                                <div className="empty-state-icon">✅</div>
+                                <div className="empty-state-icon" style={{ color: 'var(--rating-liked)' }}><Icon name="check" size={36} /></div>
                                 <p className="empty-state-title">Todos reservaron</p>
                                 <p className="empty-state-subtitle">Todos los funcionarios tienen reserva para esta semana.</p>
                             </div>
@@ -531,7 +677,7 @@ export default function AdminDashboard() {
                                         disabled={loading || !menuData[menuType]}
                                         aria-label="Guardar cambios del menú"
                                     >
-                                        {loading ? 'Guardando...' : '✓ Guardar Cambios'}
+                                        {loading ? 'Guardando...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Icon name="save" size={15} /> Guardar cambios</span>}
                                     </button>
                                 ) : (
                                     <span className="badge badge-gray">Solo lectura</span>
@@ -545,13 +691,13 @@ export default function AdminDashboard() {
                             {DAYS.map(day => (
                                 <div key={day} className="menu-day-panel">
                                     <div className="menu-day-header">
-                                        <span>📅</span>
+                                        <Icon name="calendar" size={16} />
                                         <span>{day.charAt(0).toUpperCase() + day.slice(1)}</span>
                                     </div>
                                     <div className="menu-day-body">
                                         <div className="menu-day-col">
                                             <div className="menu-col-label">
-                                                <span>🍽️</span> Comidas
+                                                <Icon name="utensils" size={15} /> Comidas
                                             </div>
                                             <div className="menu-input-list">
                                                 {menuData[menuType]?.days[day]?.meals?.map((m: string, i: number) => (
@@ -569,7 +715,7 @@ export default function AdminDashboard() {
                                         </div>
                                         <div className="menu-day-col">
                                             <div className="menu-col-label">
-                                                <span>🍰</span> Postres
+                                                <Icon name="cake" size={15} /> Postres
                                             </div>
                                             <div className="menu-input-list">
                                                 {menuData[menuType]?.days[day]?.desserts?.map((d: string, i: number) => (
@@ -591,7 +737,7 @@ export default function AdminDashboard() {
                         </div>
                     ) : (
                         <div className="menu-missing-alert">
-                            <span style={{ fontSize: '2.5rem' }}>⚠️</span>
+                            <span style={{ color: 'var(--warning-text)' }}><Icon name="alert" size={40} /></span>
                             <p style={{ fontWeight: 700, color: 'var(--warning-text)', margin: 0 }}>Menú no configurado</p>
                             <p style={{ color: 'var(--warning-text)', opacity: 0.8, margin: 0, fontSize: '0.9rem' }}>
                                 No hay un menú para la {menuType === 'current' ? 'semana actual' : 'próxima semana'}.
@@ -628,43 +774,62 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
-                            {currentUser?.role === 'superadmin' && (
-                                <CsvPreviewPanel />
-                            )}
-
                             {showCreateUser && (
-                                <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'var(--bg)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-                                    <h4 style={{ marginBottom: '1rem' }}>Nuevo Usuario</h4>
-                                    <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Foto de Perfil</label>
-                                        <AvatarUploader
-                                            ref={avatarRef}
-                                            currentPhotoUrl={newUser.photoUrl}
-                                            onPhotoChange={(url) => setNewUser(prev => ({ ...prev, photoUrl: url }))}
-                                            nameForInitials={newUser.name || 'U'}
-                                            size="100px"
-                                        />
-                                        <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                                            La cuenta usará las iniciales del nombre como avatar.
-                                        </p>
-                                    </div>
-                                    <div className="grid-2" style={{ gap: '1rem' }}>
-                                        <input className="input" placeholder="Nombre Completo" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
-                                        <input className="input" placeholder="Email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
-                                        <input className="input" placeholder="Contraseña" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
-                                        <input className="input" inputMode="numeric" placeholder="Nro Funcionario" value={newUser.funcNumber} onChange={e => setNewUser({ ...newUser, funcNumber: e.target.value.replace(/\D/g, '') })} />
-                                        <input className="input" inputMode="numeric" placeholder="Documento (DNI)" value={newUser.documentId} onChange={e => setNewUser({ ...newUser, documentId: e.target.value.replace(/\D/g, '') })} />
-                                        <input className="input" placeholder="Teléfono (Opcional)" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
-                                        <select className="input" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value as any })}>
-                                            <option value="user">Usuario</option>
-                                            {(currentUser?.role === 'superadmin' || currentUser?.role === 'admin') && <option value="admin">Administrador</option>}
-                                            {currentUser?.role === 'superadmin' && <option value="superadmin">Admin General (Super Admin)</option>}
-                                        </select>
-                                    </div>
-
-                                    <div className="flex-between" style={{ marginTop: '1rem', justifyContent: 'flex-end' }}>
-                                        <button className="btn btn-secondary" onClick={() => setShowCreateUser(false)} style={{ marginRight: '0.5rem' }}>Cancelar</button>
-                                        <button className="btn btn-primary" onClick={handleCreateUser}>Crear</button>
+                                <div className="modal-backdrop animate-fade-in" onClick={() => setShowCreateUser(false)} role="presentation">
+                                    <div className="modal animate-slide-up" role="dialog" aria-modal="true" aria-labelledby="create-user-title" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
+                                        <div className="modal-header">
+                                            <h2 id="create-user-title">Nuevo usuario</h2>
+                                            <button
+                                                aria-label="Cerrar"
+                                                onClick={() => setShowCreateUser(false)}
+                                                style={{ background: 'transparent', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-light)', lineHeight: 1 }}
+                                            >×</button>
+                                        </div>
+                                        <div className="modal-body">
+                                            <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+                                                <AvatarUploader
+                                                    ref={avatarRef}
+                                                    currentPhotoUrl={newUser.photoUrl}
+                                                    onPhotoChange={(url) => setNewUser(prev => ({ ...prev, photoUrl: url }))}
+                                                    nameForInitials={newUser.name || 'U'}
+                                                    size="100px"
+                                                />
+                                                <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                                    Si no subís foto, se usan las iniciales del nombre.
+                                                </p>
+                                            </div>
+                                            <div className="grid-2" style={{ gap: '1rem' }}>
+                                                <Field label="Nombre completo" required>
+                                                    <input className="input" placeholder="Ej: Juan Pérez" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
+                                                </Field>
+                                                <Field label="Email" required>
+                                                    <input className="input" type="email" placeholder="nombre@empresa.com" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+                                                </Field>
+                                                <Field label="Contraseña" required>
+                                                    <input className="input" type="password" placeholder="Mínimo 6 caracteres" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+                                                </Field>
+                                                <Field label="Nro de funcionario" required>
+                                                    <input className="input" inputMode="numeric" placeholder="Solo números" value={newUser.funcNumber} onChange={e => setNewUser({ ...newUser, funcNumber: e.target.value.replace(/\D/g, '') })} />
+                                                </Field>
+                                                <Field label="Documento (CI)" required>
+                                                    <input className="input" inputMode="numeric" placeholder="Solo números" value={newUser.documentId} onChange={e => setNewUser({ ...newUser, documentId: e.target.value.replace(/\D/g, '') })} />
+                                                </Field>
+                                                <Field label="Teléfono">
+                                                    <input className="input" placeholder="Opcional" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
+                                                </Field>
+                                                <Field label="Rol">
+                                                    <select className="input" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value as any })}>
+                                                        <option value="user">Usuario</option>
+                                                        {(currentUser?.role === 'superadmin' || currentUser?.role === 'admin') && <option value="admin">Administrador</option>}
+                                                        {currentUser?.role === 'superadmin' && <option value="superadmin">Admin General (Super Admin)</option>}
+                                                    </select>
+                                                </Field>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '1.5rem' }}>
+                                                <button className="btn btn-secondary" onClick={() => setShowCreateUser(false)}>Cancelar</button>
+                                                <button className="btn btn-primary" onClick={handleCreateUser}>Crear usuario</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -787,53 +952,41 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {selectedWeek === menuData?.current?.weekStart && (
-                            <div className="admin-panel admin-report-hero">
-                                <div className="flex-between">
-                                    <div>
-                                        <h3>Reporte de la Semana Actual</h3>
-                                        <p className="muted">Mostrando datos para la semana del {selectedWeek} (En curso)</p>
+                        {(() => {
+                            const isCurrent = selectedWeek === menuData?.current?.weekStart
+                            const isNext = selectedWeek === menuData?.next?.weekStart
+                            const heroLabel = isCurrent
+                                ? 'Semana en curso'
+                                : isNext
+                                    ? 'Proyección de la semana próxima'
+                                    : 'Semana de historial'
+                            return (
+                                <div className="admin-panel admin-report-hero">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                                        <div>
+                                            <h3 style={{ margin: 0 }}>Reporte semanal</h3>
+                                            <p className="muted" style={{ margin: '0.25rem 0 0' }}>{heroLabel} — semana del {selectedWeek || '—'}</p>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                            <button
+                                                className="btn btn-secondary"
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+                                                onClick={() => window.open(`/print?type=full_week&week=${selectedWeek}`, '_blank')}
+                                            >
+                                                <Icon name="printer" size={16} /> Imprimir reporte completo
+                                            </button>
+                                            <button
+                                                className="btn btn-primary"
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+                                                onClick={() => navigate('/admin/reports')}
+                                            >
+                                                <Icon name="activity" size={16} /> Ver gráficos y exportar
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button
-                                        className="btn btn-primary"
-                                        onClick={() => window.open(`/print?type=full_week&week=${selectedWeek}`, '_blank')}
-                                    >
-                                        Imprimir Reporte Completo
-                                    </button>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ marginLeft: '1rem', backgroundColor: '#8884d8' }}
-                                        onClick={() => navigate('/admin/reports')}
-                                    >
-                                        📈 Ver Gráficos y Exportar
-                                    </button>
                                 </div>
-                            </div>
-                        )}
-
-                        {selectedWeek === menuData?.next?.weekStart && (
-                            <div className="admin-panel admin-report-hero">
-                                <div className="flex-between">
-                                    <div>
-                                        <h3>Reporte de la Semana Proxima</h3>
-                                        <p className="muted">Mostrando proyeccion para la semana del {selectedWeek}</p>
-                                    </div>
-                                    <button
-                                        className="btn btn-primary"
-                                        onClick={() => window.open(`/print?type=full_week&week=${selectedWeek}`, '_blank')}
-                                    >
-                                        Imprimir Reporte Completo
-                                    </button>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ marginLeft: '1rem', backgroundColor: '#8884d8' }}
-                                        onClick={() => window.location.href = '/admin/reports'}
-                                    >
-                                        📈 Ver Gráficos y Exportar
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                            )
+                        })()}
                     </div>
                 )
             }
@@ -861,99 +1014,55 @@ export default function AdminDashboard() {
                     <>
                         <div className="admin-panel admin-report-summary">
                             <div className="admin-panel-header">
-                                <span className="admin-panel-title">Resumen Semanal (Total)</span>
+                                <span className="admin-panel-title">Resumen de la semana</span>
                                 <button
                                     className="btn btn-sm btn-secondary"
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                                     onClick={() => window.open(`/print?type=weekly&week=${selectedWeek}`, '_blank')}
                                 >
-                                    Imprimir Semanal
+                                    <Icon name="printer" size={15} /> Imprimir semanal
                                 </button>
                             </div>
-                            <div className="admin-report-metrics">
-                                <div className="admin-report-metric">
-                                    <h4 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span style={{ fontSize: '1.2rem' }}>🍽️</span> Total Comidas
-                                    </h4>
-                                    <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
-                                        {(() => {
-                                            const weeklyMeals: Record<string, number> = {}
-                                            DAYS.forEach(day => {
-                                                const dayStats = stats[day] || {}
-                                                if (Object.keys(dayStats).length > 0) {
-                                                    const totals = getDailyTotals(dayStats)
-                                                    Object.entries(totals.meals).forEach(([name, count]) => {
-                                                        weeklyMeals[name] = (weeklyMeals[name] || 0) + count
-                                                    })
-                                                }
-                                            })
-                                            const totalMeals = Object.values(weeklyMeals).reduce((a, b) => a + b, 0)
-                                            return (
-                                                <>
-                                                    {Object.entries(weeklyMeals).map(([name, count]) => (
-                                                        <li key={name}>{name}: <strong>{count}</strong></li>
-                                                    ))}
-                                                    <li style={{ marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.25rem' }}>
-                                                        Total: <strong>{totalMeals}</strong>
-                                                    </li>
-                                                </>
-                                            )
-                                        })()}
-                                    </ul>
-                                </div>
-                                <div className="admin-report-metric">
-                                    <h4 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span style={{ fontSize: '1.2rem' }}>🍰</span> Total Postres
-                                    </h4>
-                                    <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem', color: 'var(--text)' }}>
-                                        {(() => {
-                                            const weeklyDesserts: Record<string, number> = {}
-                                            DAYS.forEach(day => {
-                                                const dayStats = stats[day] || {}
-                                                if (Object.keys(dayStats).length > 0) {
-                                                    const totals = getDailyTotals(dayStats)
-                                                    Object.entries(totals.desserts).forEach(([name, count]) => {
-                                                        weeklyDesserts[name] = (weeklyDesserts[name] || 0) + count
-                                                    })
-                                                }
-                                            })
-                                            return Object.entries(weeklyDesserts).map(([name, count]) => (
-                                                <li key={name}>{name}: <strong>{count}</strong></li>
-                                            ))
-                                        })()}
-                                    </ul>
-                                </div>
-                                <div className="admin-report-metric admin-report-metric-center">
-                                    <h4 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span style={{ fontSize: '1.2rem' }}>🥖</span> Total Extras
-                                    </h4>
-                                    <div style={{ fontSize: '1.5rem', color: 'var(--text)', textAlign: 'center' }}>
-                                        Panes: <strong style={{ color: 'var(--accent)' }}>
-                                            {(() => {
-                                                let totalBread = 0
-                                                DAYS.forEach(day => {
-                                                    const dayStats = stats[day] || {}
-                                                    if (Object.keys(dayStats).length > 0) {
-                                                        const totals = getDailyTotals(dayStats)
-                                                        totalBread += totals.bread
-                                                    }
-                                                })
-                                                return totalBread
-                                            })()}
-                                        </strong>
+                            {(() => {
+                                const weeklyMeals: Record<string, number> = {}
+                                const weeklyDesserts: Record<string, number> = {}
+                                let totalBread = 0
+                                DAYS.forEach(day => {
+                                    const dayStats = stats[day] || {}
+                                    if (Object.keys(dayStats).length > 0) {
+                                        const totals = getDailyTotals(dayStats)
+                                        Object.entries(totals.meals).forEach(([name, count]) => { weeklyMeals[name] = (weeklyMeals[name] || 0) + count })
+                                        Object.entries(totals.desserts).forEach(([name, count]) => { weeklyDesserts[name] = (weeklyDesserts[name] || 0) + count })
+                                        totalBread += totals.bread
+                                    }
+                                })
+                                const totalMeals = Object.values(weeklyMeals).reduce((a, b) => a + b, 0)
+                                const totalDesserts = Object.values(weeklyDesserts).reduce((a, b) => a + b, 0)
+                                return (
+                                    <div style={{ padding: '1.25rem' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                                            <ReportStatTile icon={<Icon name="utensils" />} label="Comidas totales" value={totalMeals} accent="#0284c7" />
+                                            <ReportStatTile icon={<Icon name="cake" />} label="Postres totales" value={totalDesserts} accent="#9333ea" />
+                                            <ReportStatTile icon={<Icon name="bread" />} label="Panes" value={totalBread} accent="#d97706" />
+                                        </div>
+                                        <div className="grid-2" style={{ gap: '1.5rem' }}>
+                                            <ReportBreakdownList title="Comidas" icon={<Icon name="utensils" />} accent="#0284c7" items={Object.entries(weeklyMeals)} />
+                                            <ReportBreakdownList title="Postres" icon={<Icon name="cake" />} accent="#9333ea" items={Object.entries(weeklyDesserts)} />
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                )
+                            })()}
                         </div>
 
                         {dishRatings && dishRatings.length > 0 && (
                             <div className="admin-panel admin-report-ratings" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
                                 <div className="admin-panel-header">
-                                    <span className="admin-panel-title">⭐ Satisfacción de Platos</span>
+                                    <span className="admin-panel-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="star" size={18} /> Satisfacción de platos</span>
                                 </div>
                                 <div className="admin-panel-body" style={{ padding: '1rem 0' }}>
                                     <div className="grid-2" style={{ gap: '1.5rem' }}>
                                         <div className="card">
-                                            <h4 style={{ color: '#16a34a', marginBottom: '1rem' }}>🏆 Ranking: Mejores Platos</h4>
+                                            <h4 style={{ color: 'var(--rating-liked)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="award" size={18} /> Mejores platos</h4>
                                             <div className="table-container">
                                                 <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                                                     <thead>
@@ -971,14 +1080,14 @@ export default function AdminDashboard() {
                                                                     <div className="muted" style={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>{r.day} • {r.itemType === 'meal' ? 'Comida' : 'Postre'}</div>
                                                                 </td>
                                                                 <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                                                                    <span className={`badge ${r.positivePercent >= 80 ? 'badge-success' : r.positivePercent >= 50 ? 'badge-warning' : 'badge-danger'}`}>
+                                                                    <span className={`badge ${r.positivePercent >= 80 ? 'badge-success' : r.positivePercent >= 50 ? 'badge-warning' : 'badge-error'}`}>
                                                                         {r.positivePercent}%
                                                                     </span>
                                                                 </td>
                                                                 <td style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                                                    <span style={{ color: '#16a34a' }}>👍 {r.liked}</span>
-                                                                    <span style={{ color: '#d97706', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
-                                                                    <span style={{ color: '#dc2626' }}>👎 {r.disliked}</span>
+                                                                    <span style={{ color: 'var(--rating-liked)' }}>👍 {r.liked}</span>
+                                                                    <span style={{ color: 'var(--rating-neutral)', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
+                                                                    <span style={{ color: 'var(--rating-disliked)' }}>👎 {r.disliked}</span>
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -988,7 +1097,7 @@ export default function AdminDashboard() {
                                         </div>
 
                                         <div className="card">
-                                            <h4 style={{ color: '#dc2626', marginBottom: '1rem' }}>📉 Platos con Más Votos Negativos</h4>
+                                            <h4 style={{ color: 'var(--rating-disliked)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="trendingDown" size={18} /> Más votos negativos</h4>
                                             <div className="table-container">
                                                 <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                                                     <thead>
@@ -1015,14 +1124,14 @@ export default function AdminDashboard() {
                                                                         <div className="muted" style={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>{r.day} • {r.itemType === 'meal' ? 'Comida' : 'Postre'}</div>
                                                                     </td>
                                                                     <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                                                                        <span className="badge badge-danger">
+                                                                        <span className="badge badge-error">
                                                                             {negPercent}%
                                                                         </span>
                                                                     </td>
                                                                     <td style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                                                        <span style={{ color: '#16a34a' }}>👍 {r.liked}</span>
-                                                                        <span style={{ color: '#d97706', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
-                                                                        <span style={{ color: '#dc2626' }}>👎 {r.disliked}</span>
+                                                                        <span style={{ color: 'var(--rating-liked)' }}>👍 {r.liked}</span>
+                                                                        <span style={{ color: 'var(--rating-neutral)', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
+                                                                        <span style={{ color: 'var(--rating-disliked)' }}>👎 {r.disliked}</span>
                                                                     </td>
                                                                 </tr>
                                                             )})}
@@ -1043,7 +1152,7 @@ export default function AdminDashboard() {
                                         <h4 style={{ marginBottom: '1rem', paddingLeft: '0.5rem' }}>Detalle General (Comidas y Postres)</h4>
                                         <div className="grid-2" style={{ gap: '1.5rem' }}>
                                             <div className="card">
-                                                <h5 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>🍽️ Comidas</h5>
+                                                <h5 style={{ marginBottom: '0.5rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Icon name="utensils" size={16} /> Comidas</h5>
                                                 <div className="table-container">
                                                     <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
                                                         <tbody>
@@ -1054,9 +1163,9 @@ export default function AdminDashboard() {
                                                                         <div className="muted" style={{ fontSize: '0.7rem', textTransform: 'capitalize' }}>{r.day}</div>
                                                                     </td>
                                                                     <td style={{ padding: '0.5rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                                                        <span style={{ color: '#16a34a' }}>👍 {r.liked}</span>
-                                                                        <span style={{ color: '#d97706', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
-                                                                        <span style={{ color: '#dc2626' }}>👎 {r.disliked}</span>
+                                                                        <span style={{ color: 'var(--rating-liked)' }}>👍 {r.liked}</span>
+                                                                        <span style={{ color: 'var(--rating-neutral)', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
+                                                                        <span style={{ color: 'var(--rating-disliked)' }}>👎 {r.disliked}</span>
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -1068,7 +1177,7 @@ export default function AdminDashboard() {
                                                 </div>
                                             </div>
                                             <div className="card">
-                                                <h5 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>🍰 Postres</h5>
+                                                <h5 style={{ marginBottom: '0.5rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Icon name="cake" size={16} /> Postres</h5>
                                                 <div className="table-container">
                                                     <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
                                                         <tbody>
@@ -1079,9 +1188,9 @@ export default function AdminDashboard() {
                                                                         <div className="muted" style={{ fontSize: '0.7rem', textTransform: 'capitalize' }}>{r.day}</div>
                                                                     </td>
                                                                     <td style={{ padding: '0.5rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                                                        <span style={{ color: '#16a34a' }}>👍 {r.liked}</span>
-                                                                        <span style={{ color: '#d97706', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
-                                                                        <span style={{ color: '#dc2626' }}>👎 {r.disliked}</span>
+                                                                        <span style={{ color: 'var(--rating-liked)' }}>👍 {r.liked}</span>
+                                                                        <span style={{ color: 'var(--rating-neutral)', margin: '0 0.4rem' }}>😐 {r.neutral}</span>
+                                                                        <span style={{ color: 'var(--rating-disliked)' }}>👎 {r.disliked}</span>
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -1112,13 +1221,13 @@ export default function AdminDashboard() {
                                             <p className="muted">No hay datos para este dia.</p>
                                         ) : (
                                             <>
-                                                <div className="card-glass" style={{ padding: '1.5rem', borderRadius: '0.5rem', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
-                                                    <div className="flex-between" style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                                                        <h4 style={{ color: 'var(--accent)' }}>Resumen de Produccion (Total Dia)</h4>
+                                                <div style={{ marginBottom: '1.5rem' }}>
+                                                    <div className="flex-between" style={{ marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                                        <h4 style={{ color: 'var(--accent)', margin: 0 }}>Resumen de producción (total del día)</h4>
                                                         <button
                                                             className="btn btn-sm btn-secondary"
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                                                             onClick={() => {
-                                                                // Calculate date from week + day index
                                                                 const dayIndex = DAYS.indexOf(day);
                                                                 const [y, m, d] = selectedWeek.split('-').map(Number);
                                                                 const date = new Date(y, m - 1, d + dayIndex);
@@ -1126,87 +1235,62 @@ export default function AdminDashboard() {
                                                                 window.open(`/print?type=daily&date=${dateStr}`, '_blank');
                                                             }}
                                                         >
-                                                            Imprimir Dia
+                                                            <Icon name="printer" size={15} /> Imprimir día
                                                         </button>
                                                     </div>
-                                                    <div className="grid-3" style={{ gap: '1rem' }}>
-                                                        <div className="card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                                                            <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <span style={{ fontSize: '1.2rem' }}>🍽️</span> Comidas:
-                                                            </h5>
-                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem' }}>
-                                                            {Object.entries(totals!.meals).map(([name, count]) => (
-                                                                    <li key={name}>{name}: <strong>{count}</strong></li>
-                                                                ))}
-                                                                <li style={{ marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.25rem' }}>
-                                                                    Total: <strong>{Object.values(totals!.meals).reduce((a, b) => a + b, 0)}</strong>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                        <div className="card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                                                            <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <span style={{ fontSize: '1.2rem' }}>🍰</span> Postres:
-                                                            </h5>
-                                                            <ul style={{ paddingLeft: '0', listStyle: 'none', fontSize: '0.9rem' }}>
-                                                                {Object.entries(totals!.desserts).map(([name, count]) => (
-                                                                    <li key={name}>{name}: <strong>{count}</strong></li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                        <div className="card" style={{ padding: '1rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <h5 className="muted" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <span style={{ fontSize: '1.2rem' }}>🥖</span> Extras:
-                                                            </h5>
-                                                            <div style={{ fontSize: '1.5rem', textAlign: 'center' }}>
-                                                                Panes: <strong style={{ color: 'var(--accent)' }}>{totals!.bread}</strong>
-                                                            </div>
-                                                        </div>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+                                                        <ReportStatTile icon={<Icon name="utensils" />} label="Comidas" value={Object.values(totals!.meals).reduce((a, b) => a + b, 0)} accent="#0284c7" />
+                                                        <ReportStatTile icon={<Icon name="cake" />} label="Postres" value={Object.values(totals!.desserts).reduce((a, b) => a + b, 0)} accent="#9333ea" />
+                                                        <ReportStatTile icon={<Icon name="bread" />} label="Panes" value={totals!.bread} accent="#d97706" />
+                                                    </div>
+                                                    <div className="grid-2" style={{ gap: '1.5rem' }}>
+                                                        <ReportBreakdownList title="Comidas" icon={<Icon name="utensils" />} accent="#0284c7" items={Object.entries(totals!.meals)} />
+                                                        <ReportBreakdownList title="Postres" icon={<Icon name="cake" />} accent="#9333ea" items={Object.entries(totals!.desserts)} />
                                                     </div>
                                                 </div>
 
-                                                <h4 style={{ marginBottom: '1rem' }}>Detalle por Horario</h4>
-                                                <div className="table-container">
-                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                                <h4 style={{ marginBottom: '1rem' }}>Detalle por horario</h4>
+                                                <div className="admin-table-wrap">
+                                                    <table className="res-table">
                                                         <thead>
-                                                            <tr style={{ background: 'var(--card)', textAlign: 'left' }}>
-                                                                <th style={{ padding: '0.75rem', borderBottom: '2px solid var(--border)' }}>Horario</th>
-                                                                <th style={{ padding: '0.75rem', borderBottom: '2px solid var(--border)' }}>Comidas</th>
-                                                                <th style={{ padding: '0.75rem', borderBottom: '2px solid var(--border)' }}>Postres</th>
-                                                                <th style={{ padding: '0.75rem', borderBottom: '2px solid var(--border)' }}>Pan</th>
+                                                            <tr>
+                                                                <th>Horario</th>
+                                                                <th>Comidas</th>
+                                                                <th>Postres</th>
+                                                                <th style={{ textAlign: 'right' }}>Pan</th>
+                                                                <th style={{ textAlign: 'right' }}>Acción</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {Object.entries(dayStats).sort().map(([slot, data]: [string, any]) => (
-                                                                <tr key={slot} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                                    <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>
-                                                                        <div className="flex-between" style={{ gap: '0.5rem' }}>
-                                                                            {slot}
-                                                                            <button
-                                                                                className="btn btn-sm btn-secondary"
-                                                                                style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                                                                                onClick={() => {
-                                                                                    const dayIndex = DAYS.indexOf(day);
-                                                                                    const [y, m, d] = selectedWeek.split('-').map(Number);
-                                                                                    const date = new Date(y, m - 1, d + dayIndex);
-                                                                                    const dateStr = date.toISOString().split('T')[0];
-                                                                                    window.open(`/print?type=slot&date=${dateStr}&slot=${slot}`, '_blank');
-                                                                                }}
-                                                                            >
-                                                                                Imprimir
-                                                                            </button>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td style={{ padding: '0.75rem' }}>
+                                                                <tr key={slot}>
+                                                                    <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{slot}</td>
+                                                                    <td>
                                                                         {Object.entries(data.meals).map(([name, count]: [string, any]) => (
                                                                             <div key={name}>{name}: <strong>{count}</strong></div>
                                                                         ))}
                                                                     </td>
-                                                                    <td style={{ padding: '0.75rem' }}>
+                                                                    <td>
                                                                         {Object.entries(data.desserts).map(([name, count]: [string, any]) => (
                                                                             <div key={name}>{name}: <strong>{count}</strong></div>
                                                                         ))}
                                                                     </td>
-                                                                    <td style={{ padding: '0.75rem' }}><strong>{data.bread}</strong></td>
+                                                                    <td style={{ textAlign: 'right' }}><strong>{data.bread}</strong></td>
+                                                                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                                        <button
+                                                                            className="btn btn-sm btn-secondary"
+                                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                                                                            onClick={() => {
+                                                                                const dayIndex = DAYS.indexOf(day);
+                                                                                const [y, m, d] = selectedWeek.split('-').map(Number);
+                                                                                const date = new Date(y, m - 1, d + dayIndex);
+                                                                                const dateStr = date.toISOString().split('T')[0];
+                                                                                window.open(`/print?type=slot&date=${dateStr}&slot=${slot}`, '_blank');
+                                                                            }}
+                                                                        >
+                                                                            <Icon name="printer" size={14} /> Imprimir
+                                                                        </button>
+                                                                    </td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
@@ -1268,10 +1352,73 @@ export default function AdminDashboard() {
                 </div>
             )}
         </div>{/* end admin-layout */}
+
+        <ConfirmDialog
+            state={confirmState}
+            onConfirm={() => resolveConfirm(true)}
+            onCancel={() => resolveConfirm(false)}
+        />
         </Layout>
     )
 }
 
+
+// Campo de formulario con label accesible (envuelve el input → el clic en la
+// etiqueta enfoca el control). Marca obligatorios con un asterisco.
+function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+    return (
+        <label style={{ display: 'block' }}>
+            <span style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>
+                {label}{required && <span style={{ color: 'var(--error-text)' }}> *</span>}
+            </span>
+            {children}
+        </label>
+    )
+}
+
+// ─── Subcomponentes de presentación para la pestaña Reportes ─────────────────
+function ReportStatTile({ icon, label, value, accent }: { icon: ReactNode; label: string; value: number | string; accent: string }) {
+    return (
+        <div style={{ flex: '1 1 150px', display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '1.1rem 1.25rem', background: 'var(--bg)', border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 'var(--radius)' }}>
+            <span style={{ display: 'flex', color: accent, background: `${accent}1a`, padding: '0.55rem', borderRadius: '10px' }}>{icon}</span>
+            <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '1.7rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>{value}</div>
+                <div className="muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.4px', fontWeight: 600 }}>{label}</div>
+            </div>
+        </div>
+    )
+}
+
+function ReportBreakdownList({ title, icon, items, accent }: { title: string; icon: ReactNode; items: Array<[string, number]>; accent: string }) {
+    const sorted = [...items].sort((a, b) => b[1] - a[1])
+    const max = sorted.reduce((m, [, c]) => Math.max(m, c), 0) || 1
+    const total = sorted.reduce((s, [, c]) => s + c, 0)
+    return (
+        <div className="card" style={{ padding: '1.1rem 1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+                <h5 style={{ margin: 0, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}><span>{icon}</span>{title}</h5>
+                <span className="muted" style={{ fontSize: '0.8rem' }}>Total <strong style={{ color: 'var(--text)' }}>{total}</strong></span>
+            </div>
+            {sorted.length === 0 ? (
+                <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>Sin datos</p>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    {sorted.map(([name, count]) => (
+                        <div key={name}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.2rem' }}>
+                                <span style={{ color: 'var(--text)' }}>{name}</span>
+                                <strong style={{ color: 'var(--text)' }}>{count}</strong>
+                            </div>
+                            <div style={{ height: 6, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+                                <div style={{ width: `${(count / max) * 100}%`, height: '100%', background: accent, borderRadius: 4 }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
 
 function UserRow({
     user,
