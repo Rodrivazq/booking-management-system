@@ -13,7 +13,9 @@
     "ops:check": "ts-node src/scripts/ops-check.ts",
     "load-test": "ts-node src/scripts/load-test.ts",
     "backup:rehearsal": "ts-node src/scripts/backup-rehearsal.ts",
-    "seed:demo-ratings": "ts-node src/scripts/seed-demo-ratings.ts"
+    "seed:demo-ratings": "ts-node src/scripts/seed-demo-ratings.ts",
+    "seed:demo-prod": "ts-node src/scripts/seed-demo-production.ts",
+    "rollback:demo-prod": "ts-node src/scripts/rollback-demo-production.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

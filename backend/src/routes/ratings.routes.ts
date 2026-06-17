@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
-import { getMyRatings, upsertRating, getAdminRatings, getGlobalAdminRatings } from '../controllers/ratings.controller';
+import { getMyRatings, getPendingRatings, upsertRating, getAdminRatings, getGlobalAdminRatings } from '../controllers/ratings.controller';
 
 const router = Router();
 
 // User: get own ratings for a week
 router.get('/my', authMiddleware, getMyRatings);
+
+// User: dishes already served but not yet rated (last ~8 weeks)
+router.get('/pending', authMiddleware, getPendingRatings);
 
 // User: create or update a rating
 router.put('/', authMiddleware, upsertRating);

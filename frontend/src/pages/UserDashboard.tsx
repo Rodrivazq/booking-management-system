@@ -23,6 +23,14 @@ interface ReservationWindow {
     reason: string
 }
 
+// Shape returned by GET /api/ratings/pending — platos ya servidos sin calificar
+interface PendingItem {
+    weekStart: string
+    day: string
+    itemType: 'meal' | 'dessert'
+    itemName: string
+}
+
 export default function UserDashboard() {
     const { success, error } = useToast()
     const [menus, setMenus] = useState<{ current: Menu, next: Menu } | null>(null)
@@ -39,6 +47,10 @@ export default function UserDashboard() {
     const [showRatingReminder, setShowRatingReminder] = useState(false)
     // Ratings
     const [ratings, setRatings] = useState<Record<string, string>>({})
+    // Calificaciones pendientes (platos servidos de cualquier semana sin calificar)
+    const [pending, setPending] = useState<PendingItem[]>([])
+    const [pendingChoices, setPendingChoices] = useState<Record<string, string>>({})
+    const [confirmingPending, setConfirmingPending] = useState(false)
 
     useEffect(() => {
         loadData()
@@ -88,6 +100,14 @@ export default function UserDashboard() {
                 setRatings(rMap)
             } catch {
                 // ratings are non-critical, fail silently
+            }
+
+            // Load pending ratings (dishes already served, any week, not yet rated)
+            try {
+                const pend = await apiFetch<PendingItem[]>('/api/ratings/pending')
+                setPending(pend)
+            } catch {
+                // non-critical
             }
 
             // Default view: Mon-Wed → next, Thu-Sun → next too (always start on 'next')
@@ -176,6 +196,58 @@ export default function UserDashboard() {
         }
     }
 
+    const pendingKey = (item: PendingItem) => `${item.weekStart}::${item.day}::${item.itemType}::${item.itemName}`
+
+    // Sólo marca la elección localmente; no guarda hasta confirmar.
+    const handleSelectPending = (item: PendingItem, rating: string) => {
+        setPendingChoices(prev => ({ ...prev, [pendingKey(item)]: rating }))
+    }
+
+    // Guarda TODAS las calificaciones seleccionadas y recién ahí las quita de la
+    // lista. Las no calificadas quedan pendientes.
+    const handleConfirmPending = async () => {
+        const toSave = pending.filter(p => pendingChoices[pendingKey(p)])
+        if (toSave.length === 0) return
+
+        setConfirmingPending(true)
+        const savedKeys = new Set<string>()
+        let failed = 0
+        for (const item of toSave) {
+            const key = pendingKey(item)
+            try {
+                await apiFetch('/api/ratings', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        weekStart: item.weekStart,
+                        day: item.day,
+                        itemType: item.itemType,
+                        itemName: item.itemName,
+                        rating: pendingChoices[key],
+                    }),
+                })
+                savedKeys.add(key)
+                // Mantené sincronizada la sección de la semana actual.
+                if (item.weekStart === dates?.current) {
+                    setRatings(prev => ({ ...prev, [`${item.day}::${item.itemType}::${item.itemName}`]: pendingChoices[key] }))
+                }
+            } catch {
+                failed++
+            }
+        }
+
+        // Quitar de pendientes sólo lo que se guardó OK.
+        setPending(prev => prev.filter(p => !savedKeys.has(pendingKey(p))))
+        setPendingChoices(prev => {
+            const next = { ...prev }
+            savedKeys.forEach(k => delete next[k])
+            return next
+        })
+        setConfirmingPending(false)
+
+        if (savedKeys.size > 0) success(`${savedKeys.size} calificación(es) guardada(s). ¡Gracias!`)
+        if (failed > 0) error(`${failed} no se pudieron guardar. Reintentá.`)
+    }
+
     if (!menus || !dates || !window_) {
         return (
             <Layout>
@@ -252,6 +324,17 @@ export default function UserDashboard() {
 
     return (
         <Layout title="Reserva de Menú" subtitle={formatDateRange(activeDate)}>
+            {/* ── Calificaciones pendientes (cualquier semana, platos ya servidos) ── */}
+            {pending.length > 0 && (
+                <PendingRatingsPanel
+                    pending={pending}
+                    choices={pendingChoices}
+                    onSelect={handleSelectPending}
+                    onConfirm={handleConfirmPending}
+                    saving={confirmingPending}
+                />
+            )}
+
             <div className="flex-between" style={{ marginBottom: '1rem' }}>
                 <div className="btn-group">
                     <button
@@ -560,6 +643,129 @@ const RATING_OPTIONS: Array<{ value: string; label: string; tone: string }> = [
     { value: 'neutral', label: 'Regular', tone: 'neutral' },
     { value: 'disliked', label: 'No me gustó', tone: 'negative' },
 ]
+
+// Etiqueta corta "dd/mm – dd/mm" para una semana operativa (lunes a viernes).
+function formatWeekShort(weekStart: string): string {
+    const [y, m, d] = weekStart.split('-').map(Number)
+    const start = new Date(y, m - 1, d)
+    const end = new Date(y, m - 1, d + 4)
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${pad(start.getDate())}/${pad(start.getMonth() + 1)} – ${pad(end.getDate())}/${pad(end.getMonth() + 1)}`
+}
+
+// Panel superior con los platos ya servidos que el usuario aún no calificó,
+// agrupados por semana. La calificación no tiene tope de tiempo.
+function PendingRatingsPanel({
+    pending,
+    choices,
+    onSelect,
+    onConfirm,
+    saving,
+}: {
+    pending: PendingItem[]
+    choices: Record<string, string>
+    onSelect: (item: PendingItem, rating: string) => void
+    onConfirm: () => void
+    saving: boolean
+}) {
+    // Colapsado por defecto para no ocupar pantalla al entrar.
+    const [open, setOpen] = useState(false)
+    const selectedCount = pending.filter(p => choices[`${p.weekStart}::${p.day}::${p.itemType}::${p.itemName}`]).length
+
+    // Agrupar por semana preservando el orden (ya viene reciente-primero).
+    const groups: Array<{ week: string; items: PendingItem[] }> = []
+    const index = new Map<string, PendingItem[]>()
+    for (const p of pending) {
+        if (!index.has(p.weekStart)) {
+            const arr: PendingItem[] = []
+            index.set(p.weekStart, arr)
+            groups.push({ week: p.weekStart, items: arr })
+        }
+        index.get(p.weekStart)!.push(p)
+    }
+
+    return (
+        <section className="meal-feedback-panel" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--accent)', padding: open ? undefined : '0.5rem 0.75rem' }}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: '0.75rem', background: 'transparent', border: 'none', cursor: 'pointer',
+                    padding: '0.5rem 0.25rem', color: 'inherit', textAlign: 'left',
+                }}
+            >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: 600 }}>
+                    <span aria-hidden style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▸</span>
+                    Calificaciones pendientes
+                    <span className="badge badge-warning" style={{ backgroundColor: 'var(--accent)', color: 'white', padding: '0.1rem 0.5rem', borderRadius: '9999px', fontSize: '0.8rem' }}>
+                        {pending.length}
+                    </span>
+                </span>
+                <span className="muted" style={{ fontSize: '0.85rem' }}>{open ? 'Ocultar' : 'Calificar'}</span>
+            </button>
+
+            {open && (
+                <p className="muted" style={{ fontSize: '0.85rem', margin: '0.25rem 0.25rem 0' }}>
+                    Platos que ya probaste y todavía no calificaste. Podés hacerlo cuando quieras.
+                </p>
+            )}
+
+            {open && groups.map(group => (
+                <div key={group.week} style={{ marginTop: '1rem' }}>
+                    <div className="meal-feedback-day-title" style={{ marginBottom: '0.5rem' }}>
+                        <span>Semana {formatWeekShort(group.week)}</span>
+                    </div>
+                    <div className="meal-feedback-list">
+                        {group.items.map(item => {
+                            const key = `${item.weekStart}::${item.day}::${item.itemType}::${item.itemName}`
+                            const current = choices[key]
+                            return (
+                                <div key={key} className="meal-feedback-item">
+                                    <div className="meal-feedback-item-copy">
+                                        <span style={{ textTransform: 'capitalize' }}>{item.day} · {item.itemType === 'meal' ? 'Comida' : 'Postre'}</span>
+                                        <strong>{item.itemName}</strong>
+                                    </div>
+                                    <div className="meal-rating-control" aria-label={`Calificar ${item.itemName}`}>
+                                        {RATING_OPTIONS.map(opt => {
+                                            const isActive = current === opt.value
+                                            return (
+                                                <button
+                                                    key={opt.value}
+                                                    className={`meal-rating-button meal-rating-${opt.tone}${isActive ? ' active' : ''}`}
+                                                    onClick={() => onSelect(item, opt.value)}
+                                                    aria-pressed={isActive}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            ))}
+
+            {open && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                    <span className="muted" style={{ fontSize: '0.85rem' }}>
+                        {selectedCount > 0 ? `${selectedCount} seleccionada(s)` : 'Elegí una opción en cada plato'}
+                    </span>
+                    <button
+                        className="btn btn-primary"
+                        onClick={onConfirm}
+                        disabled={selectedCount === 0 || saving}
+                    >
+                        {saving ? 'Guardando...' : `Confirmar${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
+                    </button>
+                </div>
+            )}
+        </section>
+    )
+}
 
 function RatingSection({
     reservation,

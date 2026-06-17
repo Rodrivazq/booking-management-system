@@ -6,6 +6,11 @@ node_modules/
 .env.local
 .env.test.local
 .env.production.local
+# Cualquier variante/backup de env (staging, *.bak) nunca debe subirse,
+# excepto los .env.example que sí son plantillas públicas.
+.env.*
+!.env.example
+*.bak
 
 # --- 3. Database & Prisma (The Generated Code) ---
 # Ignore the actual data database
@@ -42,3 +47,7 @@ backups/
 *.dump
 *.sql
 *.backup
+
+# --- 9. Demo seed manifest (artefacto local de rollback, no commitear) ---
+backend/.demo-manifest.json
+backend/.demo-manifest.json.done

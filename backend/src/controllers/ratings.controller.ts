@@ -31,6 +31,98 @@ export async function getMyRatings(req: Request, res: Response) {
     }
 }
 
+// ─── GET /api/ratings/pending ────────────────────────────────────────────────
+// Devuelve los platos que el usuario YA comió (día servido) pero todavía no
+// calificó, mirando las últimas WEEKS_LOOKBACK semanas. Es la base del panel
+// "Calificaciones pendientes": no hay tope de tiempo para calificar, sólo se
+// limita la ventana hacia atrás para no acumular indefinidamente.
+const WEEKS_LOOKBACK = 8;
+
+function mondayStringMinusDays(weekStart: string, days: number): string {
+    const [y, m, d] = weekStart.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() - days);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
+export async function getPendingRatings(req: Request, res: Response) {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+    try {
+        const now = getNowUY();
+        // Lunes operativo actual (en hora UY) para fijar la ventana de lookback.
+        const todayMonday = (() => {
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(now);
+            monday.setDate(diff);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            return `${monday.getFullYear()}-${pad(monday.getMonth() + 1)}-${pad(monday.getDate())}`;
+        })();
+        const cutoff = mondayStringMinusDays(todayMonday, WEEKS_LOOKBACK * 7);
+
+        const [reservations, existingRatings] = await Promise.all([
+            prisma.reservation.findMany({
+                where: { userId, weekStart: { gte: cutoff } },
+                select: { weekStart: true, selections: true },
+            }),
+            prisma.dishRating.findMany({
+                where: { userId, weekStart: { gte: cutoff } },
+                select: { weekStart: true, day: true, itemType: true, itemName: true },
+            }),
+        ]);
+
+        const rated = new Set(
+            existingRatings.map(r => `${r.weekStart}::${r.day}::${r.itemType}::${r.itemName}`)
+        );
+
+        type Pending = { weekStart: string; day: string; itemType: 'meal' | 'dessert'; itemName: string };
+        const pending: Pending[] = [];
+
+        for (const r of reservations) {
+            let selections: Array<{ day: string; meal: string; dessert: string }> = [];
+            try {
+                selections = JSON.parse(r.selections);
+            } catch {
+                continue; // reserva con selections corruptas: la ignoramos
+            }
+            if (!Array.isArray(selections)) continue;
+
+            for (const sel of selections) {
+                const dayIndex = DAYS_ES.indexOf(sel.day);
+                if (dayIndex === -1) continue;
+
+                // Mismo criterio que upsertRating: servido desde las 00:00 del día.
+                const [y, m, d] = r.weekStart.split('-').map(Number);
+                const mealDate = new Date(y, m - 1, d + dayIndex);
+                mealDate.setHours(0, 0, 0, 0);
+                if (now < mealDate) continue; // todavía no servido
+
+                for (const itemType of VALID_ITEM_TYPES) {
+                    const itemName = itemType === 'meal' ? sel.meal : sel.dessert;
+                    if (!itemName) continue;
+                    const key = `${r.weekStart}::${sel.day}::${itemType}::${itemName}`;
+                    if (rated.has(key)) continue;
+                    pending.push({ weekStart: r.weekStart, day: sel.day, itemType, itemName });
+                }
+            }
+        }
+
+        // Orden: semana más reciente primero, luego por día de la semana.
+        pending.sort((a, b) => {
+            if (a.weekStart !== b.weekStart) return b.weekStart.localeCompare(a.weekStart);
+            return DAYS_ES.indexOf(a.day) - DAYS_ES.indexOf(b.day);
+        });
+
+        return res.json(pending);
+    } catch (e) {
+        console.error('[getPendingRatings]', e);
+        return res.status(500).json({ error: 'Error al obtener calificaciones pendientes' });
+    }
+}
+
 // ─── PUT /api/ratings ─────────────────────────────────────────────────────────
 // Upserts a rating. Validates the user actually reserved that dish and the day has passed.
 export async function upsertRating(req: Request, res: Response) {
