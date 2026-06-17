@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, requireAdmin } from '../middleware/auth';
-import { getMyRatings, getPendingRatings, upsertRating, getAdminRatings, getGlobalAdminRatings } from '../controllers/ratings.controller';
+import { getMyRatings, getPendingRatings, upsertRating, getAdminRatings, getGlobalAdminRatings, getUserRatingsAdmin } from '../controllers/ratings.controller';
 
 const router = Router();
 
@@ -16,6 +16,9 @@ router.put('/', authMiddleware, upsertRating);
 // Admin: aggregated ratings across ALL weeks (must be declared before /admin
 // to avoid clashing with the dynamic week query param)
 router.get('/admin/global', authMiddleware, requireAdmin, getGlobalAdminRatings);
+
+// Admin: perfil de gustos de un usuario puntual
+router.get('/admin/user/:userId', authMiddleware, requireAdmin, getUserRatingsAdmin);
 
 // Admin: aggregated ratings for a single week
 router.get('/admin', authMiddleware, requireAdmin, getAdminRatings);

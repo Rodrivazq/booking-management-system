@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { updateMenu } from '../src/controllers/menu.controller';
+import { updateMenu, getMenuCatalog } from '../src/controllers/menu.controller';
 
 describe('Menu Controller Validations', () => {
     it('should return error if invalid type is provided', async () => {
@@ -79,5 +79,27 @@ describe('Menu Controller Validations', () => {
                 }),
             })
         );
+    });
+});
+
+describe('getMenuCatalog', () => {
+    it('devuelve comidas y postres distintos, ordenados y sin vacíos', async () => {
+        prismaMock.weeklyMenu.findMany.mockResolvedValue([
+            { days: JSON.stringify({
+                lunes: { meals: ['Milanesa', 'Pizza'], desserts: ['Flan', ''] },
+                martes: { meals: ['Pizza', '  Carne  '], desserts: ['Helado'] },
+            }) },
+            { days: JSON.stringify({
+                lunes: { meals: ['Milanesa'], desserts: ['Flan'] },
+            }) },
+            { days: 'no-json' }, // se ignora sin romper
+        ] as any);
+
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+        await getMenuCatalog({} as any, res);
+
+        const data = res.json.mock.calls[0][0];
+        expect(data.meals).toEqual(['Carne', 'Milanesa', 'Pizza']); // distintos, trim, ordenados
+        expect(data.desserts).toEqual(['Flan', 'Helado']);
     });
 });

@@ -28,6 +28,41 @@ export const getMenu = async (req: Request, res: Response) => {
     }
 };
 
+// GET /api/menu/catalog — nombres distintos de comidas y postres ya usados en
+// cualquier menú. Alimenta el autocompletado para reutilizar platos repetidos.
+export const getMenuCatalog = async (_req: Request, res: Response) => {
+    try {
+        const menus = await prisma.weeklyMenu.findMany({ select: { days: true } });
+        const meals = new Set<string>();
+        const desserts = new Set<string>();
+
+        for (const m of menus) {
+            let days: any;
+            try { days = JSON.parse(m.days as string); } catch { continue; }
+            for (const day of DAY_KEYS) {
+                const entry = days?.[day];
+                if (!entry) continue;
+                (Array.isArray(entry.meals) ? entry.meals : []).forEach((x: any) => {
+                    const s = String(x || '').trim();
+                    if (s) meals.add(s);
+                });
+                (Array.isArray(entry.desserts) ? entry.desserts : []).forEach((x: any) => {
+                    const s = String(x || '').trim();
+                    if (s) desserts.add(s);
+                });
+            }
+        }
+
+        res.json({
+            meals: Array.from(meals).sort((a, b) => a.localeCompare(b, 'es')),
+            desserts: Array.from(desserts).sort((a, b) => a.localeCompare(b, 'es')),
+        });
+    } catch (error) {
+        console.error('Get menu catalog error:', error);
+        res.status(500).json({ error: 'Error al obtener catalogo de menu' });
+    }
+};
+
 export const updateMenu = async (req: Request, res: Response) => {
     const { days, type } = req.body || {};
     if (!['current', 'next'].includes(type)) return res.status(400).json({ error: 'Tipo de menu invalido (current/next)' });

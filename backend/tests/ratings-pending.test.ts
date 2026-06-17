@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { prismaMock } from './prisma.mock';
-import { getPendingRatings } from '../src/controllers/ratings.controller';
+import { getPendingRatings, getUserRatingsAdmin } from '../src/controllers/ratings.controller';
 
 // Semanas fijas para que el test sea determinístico sin mockear el reloj:
 // PAST_WEEK ya ocurrió por completo; FUTURE_WEEK aún no se sirvió.
@@ -70,5 +70,33 @@ describe('getPendingRatings', () => {
         await getPendingRatings(req, res);
 
         expect(res.json).toHaveBeenCalledWith([]);
+    });
+});
+
+describe('getUserRatingsAdmin', () => {
+    it('agrega satisfacción, favoritos y platos no gustados', async () => {
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+        const req = { params: { userId: 'u1' } } as any;
+        prismaMock.dishRating.findMany.mockResolvedValue([
+            { itemName: 'Milanesa', itemType: 'meal', rating: 'liked', day: 'lunes', weekStart: '2020-01-06', updatedAt: new Date() },
+            { itemName: 'Milanesa', itemType: 'meal', rating: 'liked', day: 'lunes', weekStart: '2020-01-13', updatedAt: new Date() },
+            { itemName: 'Pescado', itemType: 'meal', rating: 'disliked', day: 'martes', weekStart: '2020-01-06', updatedAt: new Date() },
+            { itemName: 'Flan', itemType: 'dessert', rating: 'neutral', day: 'lunes', weekStart: '2020-01-06', updatedAt: new Date() },
+        ] as any);
+
+        await getUserRatingsAdmin(req, res);
+
+        const data = res.json.mock.calls[0][0];
+        expect(data.total).toBe(4);
+        expect(data.liked).toBe(2);
+        expect(data.satisfactionPercent).toBe(50);
+        expect(data.favorites[0].itemName).toBe('Milanesa');
+        expect(data.dislikedDishes[0].itemName).toBe('Pescado');
+    });
+
+    it('responde 400 sin userId', async () => {
+        const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
+        await getUserRatingsAdmin({ params: {} } as any, res);
+        expect(res.status).toHaveBeenCalledWith(400);
     });
 });

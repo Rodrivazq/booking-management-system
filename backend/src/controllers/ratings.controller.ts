@@ -264,6 +264,69 @@ export async function getGlobalAdminRatings(_req: Request, res: Response) {
     }
 }
 
+// ─── GET /api/ratings/admin/user/:userId ──────────────────────────────────────
+// Admin: perfil de gustos de un usuario. Agrega todas sus calificaciones:
+// satisfacción general, conteos, platos favoritos y los que menos le gustaron.
+export async function getUserRatingsAdmin(req: Request, res: Response) {
+    const userId = req.params.userId;
+    if (!userId) return res.status(400).json({ error: 'userId requerido' });
+
+    try {
+        const ratings = await prisma.dishRating.findMany({
+            where: { userId },
+            select: { itemName: true, itemType: true, rating: true, day: true, weekStart: true, updatedAt: true },
+            orderBy: { updatedAt: 'desc' },
+        });
+
+        let liked = 0, neutral = 0, disliked = 0;
+        const byDish = new Map<string, { itemName: string; itemType: string; liked: number; neutral: number; disliked: number }>();
+
+        for (const r of ratings) {
+            if (r.rating === 'liked') liked++;
+            else if (r.rating === 'neutral') neutral++;
+            else disliked++;
+
+            const key = `${r.itemType}::${r.itemName}`;
+            if (!byDish.has(key)) byDish.set(key, { itemName: r.itemName, itemType: r.itemType, liked: 0, neutral: 0, disliked: 0 });
+            const e = byDish.get(key)!;
+            if (r.rating === 'liked') e.liked++;
+            else if (r.rating === 'neutral') e.neutral++;
+            else e.disliked++;
+        }
+
+        const total = liked + neutral + disliked;
+        const dishes = Array.from(byDish.values()).map(d => {
+            const t = d.liked + d.neutral + d.disliked;
+            return { ...d, total: t, positivePercent: t > 0 ? Math.round((d.liked / t) * 100) : 0 };
+        });
+
+        const favorites = dishes
+            .filter(d => d.liked > 0)
+            .sort((a, b) => b.liked - a.liked || b.positivePercent - a.positivePercent)
+            .slice(0, 5);
+        const dislikedDishes = dishes
+            .filter(d => d.disliked > 0)
+            .sort((a, b) => b.disliked - a.disliked)
+            .slice(0, 5);
+
+        return res.json({
+            total,
+            liked,
+            neutral,
+            disliked,
+            satisfactionPercent: total > 0 ? Math.round((liked / total) * 100) : 0,
+            favorites,
+            dislikedDishes,
+            recent: ratings.slice(0, 8).map(r => ({
+                itemName: r.itemName, itemType: r.itemType, rating: r.rating, day: r.day, weekStart: r.weekStart,
+            })),
+        });
+    } catch (e) {
+        console.error('[getUserRatingsAdmin]', e);
+        return res.status(500).json({ error: 'Error al obtener calificaciones del usuario' });
+    }
+}
+
 // ─── GET /api/ratings/admin?week=YYYY-MM-DD ───────────────────────────────────
 // Admin: aggregated ratings per dish for a given week.
 export async function getAdminRatings(req: Request, res: Response) {

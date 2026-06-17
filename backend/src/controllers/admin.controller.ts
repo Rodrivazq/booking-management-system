@@ -6,6 +6,42 @@ import logger from '../utils/logger';
 import { sendAdminCreatedUserEmail } from '../services/email.service';
 import { validateImageUrl } from '../utils/validators';
 
+// GET /api/admin/users/overview — métricas agregadas de usuarios para el panel
+// de inicio de la pestaña Usuarios.
+export const getUsersOverview = async (_req: Request, res: Response) => {
+    try {
+        const [byRole, verified, total, reservationUsers, ratingUsers, ratingAgg] = await Promise.all([
+            prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
+            prisma.user.count({ where: { isEmailVerified: true } }),
+            prisma.user.count(),
+            prisma.reservation.findMany({ distinct: ['userId'], select: { userId: true } }),
+            prisma.dishRating.findMany({ distinct: ['userId'], select: { userId: true } }),
+            prisma.dishRating.groupBy({ by: ['rating'], _count: { _all: true } }),
+        ]);
+
+        const roleCounts: Record<string, number> = { user: 0, admin: 0, superadmin: 0 };
+        byRole.forEach((r: any) => { roleCounts[r.role] = r._count._all; });
+
+        const ratingCounts: Record<string, number> = { liked: 0, neutral: 0, disliked: 0 };
+        ratingAgg.forEach((r: any) => { ratingCounts[r.rating] = r._count._all; });
+        const totalRatings = ratingCounts.liked + ratingCounts.neutral + ratingCounts.disliked;
+
+        res.json({
+            total,
+            byRole: roleCounts,
+            verified,
+            unverified: total - verified,
+            withReservation: reservationUsers.length,
+            withRatings: ratingUsers.length,
+            totalRatings,
+            globalSatisfaction: totalRatings > 0 ? Math.round((ratingCounts.liked / totalRatings) * 100) : 0,
+        });
+    } catch (error) {
+        console.error('getUsersOverview error:', error);
+        res.status(500).json({ error: 'Error al obtener resumen de usuarios' });
+    }
+};
+
 export const updateUserDetails = async (req: Request, res: Response) => {
     const { userId } = req.params;
     const { funcNumber, email, phoneNumber, documentId } = req.body || {};

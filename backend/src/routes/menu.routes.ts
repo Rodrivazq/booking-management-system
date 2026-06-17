@@ -5,6 +5,7 @@ import { authMiddleware, requireAdmin, requireSuperAdmin } from '../middleware/a
 const router = express.Router();
 
 router.get('/', menuController.getMenu);
+router.get('/catalog', authMiddleware, requireAdmin, menuController.getMenuCatalog);
 router.put('/', authMiddleware, requireSuperAdmin, menuController.updateMenu);
 
 export default router;

@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef, Fragment, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts'
 import Layout from '../components/Layout'
 import WeekPicker from '../components/WeekPicker'
 import apiFetch from '../api'
@@ -14,6 +16,38 @@ import ConfirmDialog, { type ConfirmOptions } from '../components/ConfirmDialog'
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 type UserRole = User['role']
 const USER_ROLES: UserRole[] = ['user', 'admin', 'superadmin']
+
+// Resumen agregado de una semana (de /api/reports/stats)
+interface ReservasSummary {
+    dailyStats: { date: string; total: number; withBread: number; withoutBread: number; dayName?: string }[]
+    userStats: { totalUsers: number; activeUsers: number }
+    breadStats: { withBread: number; withoutBread: number }
+    timeSlotStats: { time: string; count: number }[]
+}
+
+// Resumen agregado de usuarios (de /api/admin/users/overview)
+interface UsersOverview {
+    total: number
+    byRole: { user: number; admin: number; superadmin: number }
+    verified: number
+    unverified: number
+    withReservation: number
+    withRatings: number
+    totalRatings: number
+    globalSatisfaction: number
+}
+
+// Perfil de gustos de un usuario (de /api/ratings/admin/user/:id)
+interface UserRatings {
+    total: number
+    liked: number
+    neutral: number
+    disliked: number
+    satisfactionPercent: number
+    favorites: { itemName: string; itemType: string; liked: number; total: number; positivePercent: number }[]
+    dislikedDishes: { itemName: string; itemType: string; disliked: number; total: number }[]
+    recent: { itemName: string; itemType: string; rating: string; day: string; weekStart: string }[]
+}
 
 export default function AdminDashboard() {
     const navigate = useNavigate()
@@ -38,7 +72,6 @@ export default function AdminDashboard() {
     const limit = 20
     const [menuData, setMenuData] = useState<{ current: Menu, next: Menu } | null>(null)
     const [menuType, setMenuType] = useState<'current' | 'next'>('next')
-    const [qr, setQr] = useState('')
     const [stats, setStats] = useState<any>(null)
     const [dishRatings, setDishRatings] = useState<Array<{
         itemName: string; itemType: string; day: string
@@ -75,6 +108,17 @@ export default function AdminDashboard() {
         withoutActive: number
     } | null>(null)
     const [overviewLoading, setOverviewLoading] = useState(false)
+
+    // Resumen de la semana en la pestaña Reservas
+    const [weekSummary, setWeekSummary] = useState<ReservasSummary | null>(null)
+
+    // Catálogo de platos ya usados (autocompletado en la pestaña Menú)
+    const [menuCatalog, setMenuCatalog] = useState<{ meals: string[]; desserts: string[] }>({ meals: [], desserts: [] })
+
+    // Overview de usuarios + perfil de gustos del usuario abierto en el modal
+    const [usersOverview, setUsersOverview] = useState<UsersOverview | null>(null)
+    const [userRatings, setUserRatings] = useState<UserRatings | null>(null)
+    const [userRatingsLoading, setUserRatingsLoading] = useState(false)
 
     // Create User State
     const [showCreateUser, setShowCreateUser] = useState(false)
@@ -128,6 +172,49 @@ export default function AdminDashboard() {
             loadStats(selectedWeek)
         }
     }, [selectedWeek, activeTab])
+
+    // Cargar el resumen de usuarios al entrar a la pestaña Usuarios
+    useEffect(() => {
+        if (activeTab !== 'users') return
+        let cancelled = false
+        apiFetch<UsersOverview>('/api/admin/users/overview')
+            .then(d => { if (!cancelled) setUsersOverview(d) })
+            .catch(e => console.error('users overview error', e))
+        return () => { cancelled = true }
+    }, [activeTab])
+
+    // Cargar el perfil de gustos cuando se abre el modal de un usuario
+    useEffect(() => {
+        if (!selectedUserForModal) { setUserRatings(null); return }
+        let cancelled = false
+        setUserRatingsLoading(true)
+        apiFetch<UserRatings>(`/api/ratings/admin/user/${selectedUserForModal.id}`)
+            .then(d => { if (!cancelled) setUserRatings(d) })
+            .catch(() => { if (!cancelled) setUserRatings(null) })
+            .finally(() => { if (!cancelled) setUserRatingsLoading(false) })
+        return () => { cancelled = true }
+    }, [selectedUserForModal])
+
+    // Cargar el catálogo de platos al entrar a la pestaña Menú
+    useEffect(() => {
+        if (activeTab !== 'menu') return
+        let cancelled = false
+        apiFetch<{ meals: string[]; desserts: string[] }>('/api/menu/catalog')
+            .then(d => { if (!cancelled) setMenuCatalog({ meals: d.meals || [], desserts: d.desserts || [] }) })
+            .catch(e => console.error('menu catalog error', e))
+        return () => { cancelled = true }
+    }, [activeTab])
+
+    // Cargar el resumen agregado de la semana para la pestaña Reservas
+    useEffect(() => {
+        if (activeTab !== 'reservations' || !selectedWeek) return
+        let cancelled = false
+        setWeekSummary(null)
+        apiFetch<ReservasSummary>(`/api/reports/stats?week=${encodeURIComponent(selectedWeek)}`)
+            .then(d => { if (!cancelled) setWeekSummary(d) })
+            .catch(e => console.error('week summary error', e))
+        return () => { cancelled = true }
+    }, [activeTab, selectedWeek])
 
     // Cargar datos del panel de inicio cuando se entra a esa pestaña
     useEffect(() => {
@@ -184,9 +271,6 @@ export default function AdminDashboard() {
             const m = await apiFetch<{ menu: { current: Menu, next: Menu } }>('/api/menu')
             setMenuData(m.menu)
 
-            const q = await apiFetch<{ dataUrl: string }>('/api/qr')
-            setQr(q.dataUrl)
-
             const w = await apiFetch<{ weeks: string[] }>('/api/stats/weeks')
             setWeeks(w.weeks)
             setSelectedWeek(prev => prev || (w.weeks.length > 0 ? w.weeks[0] : ''))
@@ -224,6 +308,20 @@ export default function AdminDashboard() {
 
     const handleUpdateMenu = async (initializeEmpty = false) => {
         if (!menuData) return
+
+        // Salvaguarda: editar la semana EN CURSO es riesgoso (puede haber reservas
+        // hechas). Pedimos confirmación explícita para no cambiarla por error
+        // creyendo que era la próxima.
+        if (menuType === 'current' && !initializeEmpty) {
+            const ok = await requestConfirm({
+                title: 'Vas a cambiar la semana EN CURSO',
+                message: 'Estás por modificar el menú de la semana actual, que ya está corriendo. Si hay reservas hechas, quitar o cambiar platos puede afectarlas. ¿Seguro que querés editar la semana actual y no la próxima?',
+                confirmLabel: 'Sí, editar la semana actual',
+                tone: 'danger',
+            })
+            if (!ok) return
+        }
+
         setLoading(true)
         try {
             await apiFetch('/api/menu', {
@@ -237,6 +335,21 @@ export default function AdminDashboard() {
         } finally {
             setLoading(false)
         }
+    }
+
+    // Copia el menú de la otra semana al que se está editando (no guarda hasta confirmar).
+    const copyMenuFromOtherWeek = () => {
+        if (!menuData) return
+        const source = menuType === 'next' ? menuData.current : menuData.next
+        if (!source?.days || Object.keys(source.days).length === 0) {
+            error('La otra semana no tiene un menú cargado para copiar.')
+            return
+        }
+        setMenuData({
+            ...menuData,
+            [menuType]: { ...menuData[menuType], days: JSON.parse(JSON.stringify(source.days)) },
+        })
+        success('Menú copiado al formulario. Revisá y guardá los cambios.')
     }
 
     const handleMenuChange = (day: string, type: 'meals' | 'desserts', index: number, value: string) => {
@@ -297,6 +410,20 @@ export default function AdminDashboard() {
             loadData()
         } catch (e: any) {
             error(e.message || 'Error al cambiar el rol')
+        }
+    }
+
+    // Copia nombres + teléfonos de quienes no reservaron, para recordatorios manuales.
+    const copyWithoutReservation = async () => {
+        if (usersWithoutReservation.length === 0) return
+        const text = usersWithoutReservation
+            .map(u => `${u.name}${u.phoneNumber ? ' - ' + u.phoneNumber : ''}`)
+            .join('\n')
+        try {
+            await navigator.clipboard.writeText(text)
+            success(`Copiados ${usersWithoutReservation.length} contacto(s) sin reserva`)
+        } catch {
+            error('No se pudo copiar al portapapeles')
         }
     }
 
@@ -500,6 +627,42 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
+                    {/* Resumen agregado de la semana */}
+                    {weekSummary && (() => {
+                        const s = weekSummary
+                        const active = s.userStats.activeUsers
+                        const total = s.userStats.totalUsers
+                        const adhesion = total > 0 ? Math.round((active / total) * 100) : 0
+                        const without = Math.max(0, total - active)
+                        const totalMeals = s.dailyStats.reduce((a, c) => a + c.total, 0)
+                        const cap = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1) : str
+                        const dayItems: Array<[string, number]> = s.dailyStats.map(d => [cap(d.dayName || d.date), d.total])
+                        const slotItems: Array<[string, number]> = s.timeSlotStats.map(t => [t.time, t.count])
+                        return (
+                            <div className="admin-panel">
+                                <div className="admin-panel-header">
+                                    <span className="admin-panel-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="barChart" size={17} /> Resumen de la semana</span>
+                                    <button className="btn btn-sm btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => window.open(`/print?type=weekly&week=${selectedWeek}`, '_blank')}>
+                                        <Icon name="printer" size={14} /> Imprimir
+                                    </button>
+                                </div>
+                                <div className="admin-panel-body">
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                                        <ReportStatTile icon={<Icon name="check" />} label="Reservaron" value={active} accent="#16a34a" />
+                                        <ReportStatTile icon={<Icon name="users" />} label="Adhesión" value={`${adhesion}%`} accent="#0284c7" />
+                                        <ReportStatTile icon={<Icon name="alert" />} label="Sin reserva" value={without} accent={without > 0 ? '#dc2626' : '#64748b'} />
+                                        <ReportStatTile icon={<Icon name="utensils" />} label="Comidas a preparar" value={totalMeals} accent="#9333ea" />
+                                        <ReportStatTile icon={<Icon name="bread" />} label="Con pan" value={s.breadStats.withBread} accent="#d97706" />
+                                    </div>
+                                    <div className="grid-2" style={{ gap: '1.5rem' }}>
+                                        <ReportBreakdownList title="Reservas por día" icon={<Icon name="calendar" size={15} />} accent="#0284c7" sortItems={false} items={dayItems} />
+                                        <ReportBreakdownList title="Horarios de retiro" icon={<Icon name="clock" size={15} />} accent="#8b5cf6" sortItems={false} items={slotItems} />
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })()}
+
                     {/* Reservations panel */}
                     <div className="admin-panel">
                         <div className="admin-panel-header">
@@ -607,7 +770,14 @@ export default function AdminDashboard() {
                     <div className="admin-panel">
                         <div className="admin-panel-header">
                             <span className="admin-panel-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="alert" size={17} /> Sin reserva esta semana</span>
-                            <span className="badge badge-warning">{usersWithoutReservation.length} funcionario{usersWithoutReservation.length !== 1 ? 's' : ''}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                <span className="badge badge-warning">{usersWithoutReservation.length} funcionario{usersWithoutReservation.length !== 1 ? 's' : ''}</span>
+                                {usersWithoutReservation.length > 0 && (
+                                    <button className="btn btn-sm btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }} onClick={copyWithoutReservation}>
+                                        <Icon name="list" size={14} /> Copiar contactos
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         {usersWithoutReservation.length === 0 ? (
                             <div className="empty-state" style={{ padding: '1.5rem' }}>
@@ -671,20 +841,55 @@ export default function AdminDashboard() {
                                     </button>
                                 </div>
                                 {currentUser?.role === 'superadmin' ? (
-                                    <button
-                                    className="btn btn-primary btn-sm admin-toolbar-action"
-                                        onClick={() => handleUpdateMenu(false)}
-                                        disabled={loading || !menuData[menuType]}
-                                        aria-label="Guardar cambios del menú"
-                                    >
-                                        {loading ? 'Guardando...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Icon name="save" size={15} /> Guardar cambios</span>}
-                                    </button>
+                                    <>
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                                            onClick={copyMenuFromOtherWeek}
+                                            disabled={loading}
+                                            title={`Copiar el menú de la semana ${menuType === 'next' ? 'actual' : 'próxima'} a este formulario`}
+                                        >
+                                            <Icon name="calendar" size={15} /> Copiar de {menuType === 'next' ? 'Sem. actual' : 'Sem. próxima'}
+                                        </button>
+                                        <button
+                                            className="btn btn-primary btn-sm admin-toolbar-action"
+                                            onClick={() => handleUpdateMenu(false)}
+                                            disabled={loading || !menuData[menuType]}
+                                            aria-label="Guardar cambios del menú"
+                                        >
+                                            {loading ? 'Guardando...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}><Icon name="save" size={15} /> Guardar cambios</span>}
+                                        </button>
+                                    </>
                                 ) : (
                                     <span className="badge badge-gray">Solo lectura</span>
                                 )}
                             </div>
                         </div>
                     </div>
+
+                    {/* Aviso al editar la semana en curso */}
+                    {menuType === 'current' && (
+                        <div className="admin-panel" style={{ borderLeft: '4px solid var(--warning-text)', background: 'var(--warning-bg)' }}>
+                            <div className="admin-panel-body" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+                                <span style={{ color: 'var(--warning-text)', display: 'flex', flexShrink: 0, marginTop: '0.1rem' }}><Icon name="alert" size={22} /></span>
+                                <div>
+                                    <strong style={{ color: 'var(--warning-text)' }}>Estás editando la semana EN CURSO</strong>
+                                    <p className="muted" style={{ margin: '0.2rem 0 0', fontSize: '0.85rem' }}>
+                                        Esta es la semana que ya está corriendo. Tené cuidado: quitar o cambiar platos puede afectar reservas ya hechas.
+                                        Si querías cargar la <strong>semana próxima</strong>, cambiá arriba a “Próxima Semana”.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Catálogo para autocompletado (platos ya usados en menús previos) */}
+                    <datalist id="menu-meals-catalog">
+                        {menuCatalog.meals.map(m => <option key={m} value={m} />)}
+                    </datalist>
+                    <datalist id="menu-desserts-catalog">
+                        {menuCatalog.desserts.map(d => <option key={d} value={d} />)}
+                    </datalist>
 
                     {menuData[menuType] ? (
                         <div style={{ display: 'grid', gap: '0.75rem' }}>
@@ -704,6 +909,7 @@ export default function AdminDashboard() {
                                                     <input
                                                         key={i}
                                                         className="input"
+                                                        list="menu-meals-catalog"
                                                         value={m}
                                                         onChange={e => handleMenuChange(day, 'meals', i, e.target.value)}
                                                         disabled={currentUser?.role !== 'superadmin'}
@@ -722,6 +928,7 @@ export default function AdminDashboard() {
                                                     <input
                                                         key={i}
                                                         className="input"
+                                                        list="menu-desserts-catalog"
                                                         value={d}
                                                         onChange={e => handleMenuChange(day, 'desserts', i, e.target.value)}
                                                         disabled={currentUser?.role !== 'superadmin'}
@@ -774,7 +981,61 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
-                            {showCreateUser && (
+                            {/* Resumen general de usuarios */}
+                            {usersOverview && (
+                                <div className="admin-panel" style={{ marginBottom: '2.5rem' }}>
+                                    <div className="admin-panel-header">
+                                        <span className="admin-panel-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}><Icon name="users" size={17} /> Resumen de usuarios</span>
+                                    </div>
+                                    <div className="admin-panel-body">
+                                        {/* KPIs compactos */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                                            <ReportStatTile icon={<Icon name="users" />} label="Usuarios totales" value={usersOverview.total} accent="#0284c7" />
+                                            <ReportStatTile icon={<Icon name="list" />} label="Con reserva" value={usersOverview.withReservation} accent="#0ea5e9" />
+                                            <ReportStatTile icon={<Icon name="star" />} label="Con reseñas" value={usersOverview.withRatings} accent="#9333ea" />
+                                            <ReportStatTile icon={<Icon name="check" />} label="Reseñas totales" value={usersOverview.totalRatings} accent="#16a34a" />
+                                        </div>
+                                        {/* Gráficas */}
+                                        <div className="grid-3" style={{ gap: '1.5rem' }}>
+                                            <UsersDonut
+                                                title="Composición"
+                                                subtitle="Por tipo de cuenta"
+                                                centerValue={usersOverview.total}
+                                                centerLabel="usuarios"
+                                                data={[
+                                                    { name: 'Funcionarios', value: usersOverview.byRole.user, color: '#0284c7' },
+                                                    { name: 'Admins', value: usersOverview.byRole.admin, color: '#9333ea' },
+                                                    { name: 'Super admins', value: usersOverview.byRole.superadmin, color: '#16a34a' },
+                                                ]}
+                                            />
+                                            <UsersDonut
+                                                title="Verificación de email"
+                                                subtitle="Cuentas confirmadas"
+                                                centerValue={`${usersOverview.total > 0 ? Math.round((usersOverview.verified / usersOverview.total) * 100) : 0}%`}
+                                                centerLabel="verificados"
+                                                data={[
+                                                    { name: 'Verificados', value: usersOverview.verified, color: '#16a34a' },
+                                                    { name: 'Pendientes', value: usersOverview.unverified, color: '#d97706' },
+                                                ]}
+                                            />
+                                            <SatisfactionGauge
+                                                value={usersOverview.totalRatings > 0 ? usersOverview.globalSatisfaction : 0}
+                                                subtitle={usersOverview.totalRatings > 0 ? `${usersOverview.totalRatings} reseñas en total` : 'Sin reseñas aún'}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Separador: base de usuarios */}
+                            <div className="admin-section-header" style={{ marginBottom: '1rem' }}>
+                                <div>
+                                    <p className="admin-section-title" style={{ fontSize: '1.15rem' }}>Lista de funcionarios</p>
+                                    <p className="admin-section-subtitle">{totalItems} usuarios{totalPages > 1 ? ` · página ${page} de ${totalPages}` : ''}</p>
+                                </div>
+                            </div>
+
+                            {showCreateUser && createPortal(
                                 <div className="modal-backdrop animate-fade-in" onClick={() => setShowCreateUser(false)} role="presentation">
                                     <div className="modal animate-slide-up" role="dialog" aria-modal="true" aria-labelledby="create-user-title" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
                                         <div className="modal-header">
@@ -831,7 +1092,8 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div>,
+                                document.body
                             )}
 
                             <div className="admin-user-grid">
@@ -869,15 +1131,6 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             )}
-                        <div className="admin-panel admin-qr-panel">
-                            <div>
-                                <h3>Código QR de Acceso</h3>
-                                <p className="muted">Escaneá este código para acceder a la aplicación desde el móvil.</p>
-                            </div>
-                            <div className="admin-qr-box">
-                                {qr ? <img src={qr} alt="QR Code" /> : <Skeleton width="200px" height="200px" />}
-                            </div>
-                        </div>
                     </div>
                 )
             }
@@ -1306,7 +1559,7 @@ export default function AdminDashboard() {
                 )
             }
 
-            {selectedUserForModal && (
+            {selectedUserForModal && createPortal(
                 <div className="modal-backdrop animate-fade-in" onClick={() => setSelectedUserForModal(null)}>
                     <div className="modal animate-slide-up" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
@@ -1347,9 +1600,57 @@ export default function AdminDashboard() {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Perfil de gustos del usuario */}
+                            <div style={{ width: '100%' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem' }}><Icon name="star" size={15} /> Opinión sobre los platos</strong>
+                                    {userRatings && userRatings.total > 0 && (
+                                        <span className={`badge ${userRatings.satisfactionPercent >= 70 ? 'badge-success' : userRatings.satisfactionPercent >= 40 ? 'badge-warning' : 'badge-error'}`}>
+                                            {userRatings.satisfactionPercent}% satisfacción
+                                        </span>
+                                    )}
+                                </div>
+                                {userRatingsLoading ? (
+                                    <Skeleton height="48px" />
+                                ) : !userRatings || userRatings.total === 0 ? (
+                                    <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>Todavía no calificó ningún plato.</p>
+                                ) : (
+                                    <>
+                                        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: '0.5rem', background: 'var(--border)' }}>
+                                            <div style={{ width: `${(userRatings.liked / userRatings.total) * 100}%`, background: 'var(--rating-liked)' }} />
+                                            <div style={{ width: `${(userRatings.neutral / userRatings.total) * 100}%`, background: 'var(--rating-neutral)' }} />
+                                            <div style={{ width: `${(userRatings.disliked / userRatings.total) * 100}%`, background: 'var(--rating-disliked)' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                                            <span style={{ color: 'var(--rating-liked)', fontWeight: 600 }}>👍 {userRatings.liked}</span>
+                                            <span style={{ color: 'var(--rating-neutral)', fontWeight: 600 }}>😐 {userRatings.neutral}</span>
+                                            <span style={{ color: 'var(--rating-disliked)', fontWeight: 600 }}>👎 {userRatings.disliked}</span>
+                                            <span className="muted">· {userRatings.total} calificaciones</span>
+                                        </div>
+                                        {userRatings.favorites.length > 0 && (
+                                            <div style={{ marginBottom: '0.6rem' }}>
+                                                <span className="muted" style={{ fontSize: '0.78rem', display: 'block', marginBottom: '0.3rem' }}>Le gustan</span>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                                    {userRatings.favorites.map(f => <span key={`${f.itemType}-${f.itemName}`} className="badge badge-success" style={{ fontSize: '0.72rem' }}>{f.itemName}</span>)}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {userRatings.dislikedDishes.length > 0 && (
+                                            <div>
+                                                <span className="muted" style={{ fontSize: '0.78rem', display: 'block', marginBottom: '0.3rem' }}>No le gustan</span>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                                    {userRatings.dislikedDishes.map(f => <span key={`${f.itemType}-${f.itemName}`} className="badge badge-error" style={{ fontSize: '0.72rem' }}>{f.itemName}</span>)}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>{/* end admin-layout */}
 
@@ -1376,6 +1677,69 @@ function Field({ label, required, children }: { label: string; required?: boolea
     )
 }
 
+// Dona con leyenda y total al centro (composición de usuarios, verificación…)
+function UsersDonut({ title, subtitle, data, centerValue, centerLabel }: {
+    title: string; subtitle?: string; centerValue: number | string; centerLabel: string
+    data: Array<{ name: string; value: number; color: string }>
+}) {
+    const filtered = data.filter(d => d.value > 0)
+    return (
+        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ marginBottom: '0.25rem' }}>
+                <h5 style={{ margin: 0, color: 'var(--text)' }}>{title}</h5>
+                {subtitle && <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>{subtitle}</p>}
+            </div>
+            <div style={{ position: 'relative', width: '100%', height: 180 }}>
+                <ResponsiveContainer>
+                    <PieChart>
+                        <Pie data={filtered} dataKey="value" nameKey="name" innerRadius={52} outerRadius={78} paddingAngle={2} stroke="none">
+                            {filtered.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)', fontSize: '0.8rem' }} />
+                    </PieChart>
+                </ResponsiveContainer>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{centerValue}</span>
+                    <span className="muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{centerLabel}</span>
+                </div>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 1rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                {filtered.map((d, i) => (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--text-light)' }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color }} /> {d.name}: <strong style={{ color: 'var(--text)' }}>{d.value}</strong>
+                    </span>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+// Medidor radial de satisfacción general (% positivo).
+function SatisfactionGauge({ value, subtitle }: { value: number; subtitle: string }) {
+    const color = value >= 70 ? '#16a34a' : value >= 40 ? '#d97706' : '#dc2626'
+    const data = [{ name: 'satisfaccion', value }]
+    return (
+        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ marginBottom: '0.25rem' }}>
+                <h5 style={{ margin: 0, color: 'var(--text)' }}>Satisfacción general</h5>
+                <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>{subtitle}</p>
+            </div>
+            <div style={{ position: 'relative', width: '100%', height: 180, marginTop: 'auto' }}>
+                <ResponsiveContainer>
+                    <RadialBarChart innerRadius="66%" outerRadius="100%" data={data} startAngle={90} endAngle={-270}>
+                        <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                        <RadialBar background={{ fill: 'var(--border)' }} dataKey="value" cornerRadius={12} angleAxisId={0} fill={color} />
+                    </RadialBarChart>
+                </ResponsiveContainer>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <span style={{ fontSize: '2rem', fontWeight: 800, color }}>{value}%</span>
+                    <span className="muted" style={{ fontSize: '0.7rem' }}>positivo</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ─── Subcomponentes de presentación para la pestaña Reportes ─────────────────
 function ReportStatTile({ icon, label, value, accent }: { icon: ReactNode; label: string; value: number | string; accent: string }) {
     return (
@@ -1389,8 +1753,8 @@ function ReportStatTile({ icon, label, value, accent }: { icon: ReactNode; label
     )
 }
 
-function ReportBreakdownList({ title, icon, items, accent }: { title: string; icon: ReactNode; items: Array<[string, number]>; accent: string }) {
-    const sorted = [...items].sort((a, b) => b[1] - a[1])
+function ReportBreakdownList({ title, icon, items, accent, sortItems = true }: { title: string; icon: ReactNode; items: Array<[string, number]>; accent: string; sortItems?: boolean }) {
+    const sorted = sortItems ? [...items].sort((a, b) => b[1] - a[1]) : items
     const max = sorted.reduce((m, [, c]) => Math.max(m, c), 0) || 1
     const total = sorted.reduce((s, [, c]) => s + c, 0)
     return (
