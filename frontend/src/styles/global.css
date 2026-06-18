@@ -1251,15 +1251,16 @@ p {
 .auth-form-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* "safe center": centra cuando entra, pero si el formulario es más alto que
+     la pantalla (registro), alinea arriba para no recortar la foto y permitir
+     el scroll completo. */
+  justify-content: safe center;
   padding: 2rem;
   max-width: 480px;
   width: 100%;
   margin: 0 auto;
   height: 100%;
-  /* Full height */
   overflow-y: auto;
-  /* Allow internal scroll if absolutely needed on very small screens */
 }
 
 .auth-header {
