@@ -1288,6 +1288,10 @@ p {
   .hide-mobile {
     display: none !important;
   }
+
+  .auth-form-container {
+    padding: 1.25rem;
+  }
 }
 
 .show-mobile {

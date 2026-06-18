@@ -390,18 +390,18 @@ export default function AuthPage() {
                         </div>
                     ) : (
                         <>
-                            <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 500 }}>
+                            <div style={{ border: '1px solid var(--border)', background: 'var(--bg)', borderRadius: 'var(--radius)', padding: '1.25rem', textAlign: 'center' }}>
+                                <label style={{ display: 'block', marginBottom: '0.85rem', fontWeight: 600 }}>
                                     Foto de perfil <span style={{ color: 'var(--error-text)' }}>*</span>
                                 </label>
                                 <AvatarUploader
                                     currentPhotoUrl={formData.photoUrl}
                                     onPhotoChange={(url) => setFormData(prev => ({ ...prev, photoUrl: url }))}
                                     nameForInitials={formData.name || 'U'}
-                                    size="110px"
+                                    size="104px"
                                 />
-                                <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                                    Obligatoria. Elegí una foto y ajustá el recorte.
+                                <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.6rem', marginBottom: 0 }}>
+                                    Obligatoria. Tocá <strong>Subir foto</strong>, elegí una imagen y ajustá el recorte.
                                 </p>
                             </div>
                             <div>
