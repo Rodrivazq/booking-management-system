@@ -23,7 +23,7 @@ describe('Auth Controller (Unit Tests)', () => {
       body: {
         name: 'Test User',
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123',
         funcNumber: 'TEST001',
         documentId: '12345678',
         photoUrl: 'https://example.com/photo.jpg'
@@ -94,7 +94,7 @@ describe('Auth Controller (Unit Tests)', () => {
   it('register informa error si no se pudo mandar email de verificación', async () => {
     const req = {
       body: {
-        name: 'Test Fail Email', email: 'fail@example.com', password: 'password123',
+        name: 'Test Fail Email', email: 'fail@example.com', password: 'Password123',
         funcNumber: 'FAIL001', documentId: '87654321', photoUrl: 'https://example.com/photo.jpg'
       }
     } as any;

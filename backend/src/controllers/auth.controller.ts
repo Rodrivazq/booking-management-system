@@ -26,6 +26,15 @@ export const register = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'URL de imagen inválida o demasiado larga. No se permiten imágenes base64.' });
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+        return res.status(400).json({ error: 'Correo electrónico inválido.' });
+    }
+
+    const pw = String(password);
+    if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw)) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres, con mayúscula, minúscula y número.' });
+    }
+
     if (TURNSTILE_SECRET_KEY && !turnstileToken) {
         return res.status(400).json({ error: 'Validación antibot requerida' });
     }

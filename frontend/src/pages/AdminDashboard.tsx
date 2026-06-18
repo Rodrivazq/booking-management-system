@@ -123,8 +123,9 @@ export default function AdminDashboard() {
     // Create User State
     const [showCreateUser, setShowCreateUser] = useState(false)
     const avatarRef = useRef<AvatarUploaderHandle>(null)
-    const [newUser, setNewUser] = useState({
-        name: '',
+    const emptyNewUser = {
+        firstName: '',
+        lastName: '',
         email: '',
         password: '',
         funcNumber: '',
@@ -132,21 +133,27 @@ export default function AdminDashboard() {
         phoneNumber: '',
         role: 'user' as 'user' | 'admin' | 'superadmin',
         photoUrl: ''
-    })
+    }
+    const [newUser, setNewUser] = useState(emptyNewUser)
 
     const handleCreateUser = async () => {
-        if (!newUser.name || !newUser.email || !newUser.password || !newUser.funcNumber || !newUser.documentId) {
-            error('Por favor completa todos los campos obligatorios, incluyendo el documento')
+        if (!newUser.firstName.trim() || !newUser.lastName.trim() || !newUser.email || !newUser.password || !newUser.funcNumber || !newUser.documentId) {
+            error('Completá nombre, apellido, email, contraseña, nro de funcionario y documento.')
+            return
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email.trim())) {
+            error('Ingresá un correo electrónico válido.')
             return
         }
         try {
+            const { firstName, lastName, ...rest } = newUser
             await apiFetch('/api/admin/users', {
                 method: 'POST',
-                body: JSON.stringify(newUser)
+                body: JSON.stringify({ ...rest, name: `${firstName.trim()} ${lastName.trim()}`.trim() })
             })
             success('Usuario creado exitosamente')
             setShowCreateUser(false)
-            setNewUser({ name: '', email: '', password: '', funcNumber: '', documentId: '', phoneNumber: '', role: 'user', photoUrl: '' })
+            setNewUser(emptyNewUser)
             loadData()
         } catch (e: any) {
             error(e.message)
@@ -1068,7 +1075,7 @@ export default function AdminDashboard() {
                                                     ref={avatarRef}
                                                     currentPhotoUrl={newUser.photoUrl}
                                                     onPhotoChange={(url) => setNewUser(prev => ({ ...prev, photoUrl: url }))}
-                                                    nameForInitials={newUser.name || 'U'}
+                                                    nameForInitials={newUser.firstName || 'U'}
                                                     size="100px"
                                                 />
                                                 <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
@@ -1076,8 +1083,11 @@ export default function AdminDashboard() {
                                                 </p>
                                             </div>
                                             <div className="grid-2" style={{ gap: '1rem' }}>
-                                                <Field label="Nombre completo" required>
-                                                    <input className="input" placeholder="Ej: Juan Pérez" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
+                                                <Field label="Nombre" required>
+                                                    <input className="input" placeholder="Juan" value={newUser.firstName} onChange={e => setNewUser({ ...newUser, firstName: e.target.value })} />
+                                                </Field>
+                                                <Field label="Apellido" required>
+                                                    <input className="input" placeholder="Pérez" value={newUser.lastName} onChange={e => setNewUser({ ...newUser, lastName: e.target.value })} />
                                                 </Field>
                                                 <Field label="Email" required>
                                                     <input className="input" type="email" placeholder="nombre@empresa.com" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />

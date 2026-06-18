@@ -10,6 +10,16 @@ import { Turnstile } from '@marsidev/react-turnstile'
 
 import { useSettings } from '../context/SettingsContext'
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const isValidEmail = (e: string) => EMAIL_RE.test((e || '').trim())
+const passwordIssue = (p: string): string | null => {
+    if (!p || p.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
+    if (!/[A-Z]/.test(p)) return 'La contraseña debe incluir al menos una mayúscula.'
+    if (!/[a-z]/.test(p)) return 'La contraseña debe incluir al menos una minúscula.'
+    if (!/[0-9]/.test(p)) return 'La contraseña debe incluir al menos un número.'
+    return null
+}
+
 export default function AuthPage() {
     const { settings } = useSettings()
     const [isLogin, setIsLogin] = useState(true)
@@ -25,6 +35,8 @@ export default function AuthPage() {
         confirmEmail: '',
         password: '',
         name: '',
+        firstName: '',
+        lastName: '',
         funcNumber: '',
         documentId: '',
         phoneNumber: '',
@@ -74,6 +86,19 @@ export default function AuthPage() {
                 throw new Error('Subí una foto de perfil para continuar.')
             }
 
+            if (!isLogin && (!formData.firstName.trim() || !formData.lastName.trim())) {
+                throw new Error('Ingresá tu nombre y tu apellido.')
+            }
+
+            if (!isLogin && !isValidEmail(formData.email)) {
+                throw new Error('Ingresá un correo electrónico válido.')
+            }
+
+            if (!isLogin) {
+                const pwIssue = passwordIssue(formData.password)
+                if (pwIssue) throw new Error(pwIssue)
+            }
+
             if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken) {
                  throw new Error('Por favor, completa la verificación anti-bot de Cloudflare')
             }
@@ -104,7 +129,7 @@ export default function AuthPage() {
                 const res = await apiFetch<{ message: string; warning?: boolean }>('/api/auth/register', {
                     method: 'POST',
                     body: JSON.stringify({
-                        name: formData.name,
+                        name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
                         email: formData.email,
                         password: formData.password,
                         funcNumber: formData.funcNumber,
@@ -380,11 +405,12 @@ export default function AuthPage() {
                                 className="input"
                                 name="identifier"
                                 type="text"
+                                inputMode="email"
                                 value={formData.identifier}
                                 onChange={handleChange}
                                 placeholder="ej. juan@empresa.com o 12345"
                                 required
-                                autoComplete="username"
+                                autoComplete="email"
                                 spellCheck="false"
                             />
                         </div>
@@ -397,23 +423,38 @@ export default function AuthPage() {
                                 <AvatarUploader
                                     currentPhotoUrl={formData.photoUrl}
                                     onPhotoChange={(url) => setFormData(prev => ({ ...prev, photoUrl: url }))}
-                                    nameForInitials={formData.name || 'U'}
+                                    nameForInitials={formData.firstName || 'U'}
                                     size="104px"
                                 />
                                 <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.6rem', marginBottom: 0 }}>
                                     Obligatoria. Tocá <strong>Subir foto</strong>, elegí una imagen y ajustá el recorte.
                                 </p>
                             </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre Completo</label>
-                                <input
-                                    className="input"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    placeholder="Juan Perez"
-                                    required
-                                />
+                            <div className="grid-2" style={{ gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre</label>
+                                    <input
+                                        className="input"
+                                        name="firstName"
+                                        value={formData.firstName}
+                                        onChange={handleChange}
+                                        placeholder="Juan"
+                                        required
+                                        autoComplete="given-name"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Apellido</label>
+                                    <input
+                                        className="input"
+                                        name="lastName"
+                                        value={formData.lastName}
+                                        onChange={handleChange}
+                                        placeholder="Pérez"
+                                        required
+                                        autoComplete="family-name"
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Correo Electrónico</label>
@@ -439,7 +480,8 @@ export default function AuthPage() {
                                     placeholder="repetí el correo"
                                     required
                                     autoComplete="off"
-                                    onPaste={e => e.preventDefault()}
+                                    onPaste={e => { e.preventDefault(); addToast('Por seguridad, escribí el correo de nuevo (no se puede pegar).', 'info') }}
+                                    onDrop={e => e.preventDefault()}
                                 />
                                 <small className="muted" style={{ fontSize: '0.8rem' }}>
                                     Escribilo de nuevo para evitar errores de tipeo. Si no recibís el correo de verificación, no podrás iniciar sesión.
@@ -518,6 +560,11 @@ export default function AuthPage() {
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
+                        {!isLogin && (
+                            <small className="muted" style={{ fontSize: '0.8rem', display: 'block', marginTop: '0.35rem' }}>
+                                Mínimo 8 caracteres, con al menos una mayúscula, una minúscula y un número.
+                            </small>
+                        )}
                     </div>
 
                     {!isLogin && (
