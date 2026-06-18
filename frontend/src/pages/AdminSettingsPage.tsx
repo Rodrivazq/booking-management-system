@@ -164,9 +164,6 @@ export default function AdminSettingsPage() {
                             {/* Reservation Rules */}
                             <div>
                                 <h3 style={{ marginBottom: '1rem', color: 'var(--primary)', borderBottom: '2px solid var(--primary)', paddingBottom: '0.5rem', display: 'inline-block' }}>Reglas de Reserva</h3>
-                                <div style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--warning-text)' }}>
-                                    ⚠️ Si cambiás el <strong>día u hora de cierre</strong>, se muestra automáticamente un <strong>cartel de aviso en la app</strong> para todos los funcionarios.
-                                </div>
                                 <div className="grid-2">
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Día de Cierre</label>
