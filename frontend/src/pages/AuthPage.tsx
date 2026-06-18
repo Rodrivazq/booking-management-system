@@ -46,6 +46,7 @@ export default function AuthPage() {
 
     const [rememberMe, setRememberMe] = useState(false)
     const [keepSession, setKeepSession] = useState(false)
+    const [acceptedTerms, setAcceptedTerms] = useState(false)
 
     // useEffect(() => {
     //     const savedIdentifier = localStorage.getItem('rememberedIdentifier')
@@ -90,6 +91,10 @@ export default function AuthPage() {
                 if (pwIssue) throw new Error(pwIssue)
             }
 
+            if (!isLogin && !acceptedTerms) {
+                throw new Error('Tenés que aceptar los Términos y la Política de Privacidad para registrarte.')
+            }
+
             if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken) {
                  throw new Error('Por favor, completa la verificación anti-bot de Cloudflare')
             }
@@ -127,6 +132,7 @@ export default function AuthPage() {
                         documentId: formData.documentId,
                         phoneNumber: formData.phoneNumber,
                         photoUrl: formData.photoUrl,
+                        acceptedTerms,
                         turnstileToken
                     })
                 })
@@ -616,6 +622,23 @@ export default function AuthPage() {
                         </div>
                     )}
 
+                    {!isLogin && (
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', fontSize: '0.85rem', cursor: 'pointer', lineHeight: 1.5 }}>
+                            <input
+                                type="checkbox"
+                                checked={acceptedTerms}
+                                onChange={e => setAcceptedTerms(e.target.checked)}
+                                style={{ accentColor: 'var(--accent)', width: '1.1rem', height: '1.1rem', marginTop: '0.15rem', flexShrink: 0 }}
+                            />
+                            <span style={{ color: 'var(--text)' }}>
+                                He leído y acepto los{' '}
+                                <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Términos y Condiciones</a>{' '}
+                                y la{' '}
+                                <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Política de Privacidad</a>.
+                            </span>
+                        </label>
+                    )}
+
                     {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
                          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
                              <Turnstile 
@@ -655,8 +678,13 @@ export default function AuthPage() {
                 </div>
 
                 <div style={{ marginTop: 'auto', textAlign: 'center', paddingTop: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '0.5rem', fontSize: '0.8rem', flexWrap: 'wrap' }}>
+                        <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Términos y Condiciones</a>
+                        <span className="muted">·</span>
+                        <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Política de Privacidad</a>
+                    </div>
                     <p className="muted" style={{ fontSize: '0.8rem' }}>
-                        &copy; {new Date().getFullYear()} Reservas App. Todos los derechos reservados.
+                        &copy; {new Date().getFullYear()} {settings.companyName || 'Reservas App'}. Todos los derechos reservados.
                     </p>
                 </div>
                     </>

@@ -12,7 +12,7 @@ import { validateImageUrl, passwordIssue } from '../utils/validators';
 
 
 export const register = async (req: Request, res: Response) => {
-    const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl, turnstileToken } = req.body || {};
+    const { name, email, password, funcNumber, documentId, phoneNumber, photoUrl, turnstileToken, acceptedTerms } = req.body || {};
     if (!name || !email || !password || !funcNumber || !documentId) {
         return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
     }
@@ -33,6 +33,10 @@ export const register = async (req: Request, res: Response) => {
     const pwErr = passwordIssue(password);
     if (pwErr) {
         return res.status(400).json({ error: pwErr });
+    }
+
+    if (acceptedTerms !== true) {
+        return res.status(400).json({ error: 'Debés aceptar los Términos y la Política de Privacidad.' });
     }
 
     if (TURNSTILE_SECRET_KEY && !turnstileToken) {
@@ -82,7 +86,8 @@ export const register = async (req: Request, res: Response) => {
                 phoneNumber: phoneNumber ? String(phoneNumber).replace(/[^\d+]/g, '').trim() || null : null,
                 photoUrl,
                 verificationToken,
-                isEmailVerified: false
+                isEmailVerified: false,
+                acceptedTermsAt: new Date()
             }
         });
 

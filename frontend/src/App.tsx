@@ -10,6 +10,8 @@ import ReportsPage from './pages/ReportsPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 import MaintenancePage from './pages/MaintenancePage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsPage from './pages/TermsPage'
 import { useAuthStore } from './hooks/useAuthStore'
 import { useSettings } from './context/SettingsContext'
 import './styles/theme.css'
@@ -45,6 +47,8 @@ export default function App() {
       <Route path="/register" element={<AuthPage />} />
       <Route path="/reset" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/privacidad" element={<PrivacyPolicyPage />} />
+      <Route path="/terminos" element={<TermsPage />} />
 
       {/* Protected Routes */}
       <Route path="/" element={

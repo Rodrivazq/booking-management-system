@@ -23,6 +23,9 @@ model User {
   // este usuario pueda reservar fuera de la ventana normal (alta a mitad de
   // semana). Se "vence" solo: deja de aplicar cuando cambia la semana.
   reservationOverrideWeek String?
+  // Momento en que el usuario aceptó los Términos y la Política de Privacidad
+  // (evidencia de consentimiento, Ley 18.331).
+  acceptedTermsAt DateTime?
   isEmailVerified Boolean @default(false)
   verificationToken String? @unique
   createdAt    DateTime @default(now())

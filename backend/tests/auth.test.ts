@@ -26,7 +26,8 @@ describe('Auth Controller (Unit Tests)', () => {
         password: 'Password123',
         funcNumber: 'TEST001',
         documentId: '12345678',
-        photoUrl: 'https://example.com/photo.jpg'
+        photoUrl: 'https://example.com/photo.jpg',
+        acceptedTerms: true
       }
     } as any;
     const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
@@ -95,7 +96,7 @@ describe('Auth Controller (Unit Tests)', () => {
     const req = {
       body: {
         name: 'Test Fail Email', email: 'fail@example.com', password: 'Password123',
-        funcNumber: 'FAIL001', documentId: '87654321', photoUrl: 'https://example.com/photo.jpg'
+        funcNumber: 'FAIL001', documentId: '87654321', photoUrl: 'https://example.com/photo.jpg', acceptedTerms: true
       }
     } as any;
     const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
