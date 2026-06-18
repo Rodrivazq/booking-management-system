@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import apiFetch from '../api'
 import { useToast } from '../context/ToastContext'
 import Layout from '../components/Layout'
+import { passwordIssue } from '../utils/validation'
 
 export default function ResetPasswordPage() {
     const [searchParams] = useSearchParams()
@@ -16,6 +17,11 @@ export default function ResetPasswordPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        const pwIssue = passwordIssue(password)
+        if (pwIssue) {
+            addToast(pwIssue, 'error')
+            return
+        }
         if (password !== confirmPassword) {
             addToast('Las contraseñas no coinciden', 'error')
             return
@@ -73,8 +79,11 @@ export default function ResetPasswordPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
-                                minLength={6}
+                                minLength={8}
                             />
+                            <small className="muted" style={{ fontSize: '0.8rem', display: 'block', marginTop: '0.35rem' }}>
+                                Mínimo 8 caracteres, con al menos una mayúscula, una minúscula y un número.
+                            </small>
                         </div>
                         <div>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Confirmar Contraseña</label>

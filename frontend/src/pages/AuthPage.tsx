@@ -9,16 +9,7 @@ import { useToast } from '../context/ToastContext'
 import { Turnstile } from '@marsidev/react-turnstile'
 
 import { useSettings } from '../context/SettingsContext'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const isValidEmail = (e: string) => EMAIL_RE.test((e || '').trim())
-const passwordIssue = (p: string): string | null => {
-    if (!p || p.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
-    if (!/[A-Z]/.test(p)) return 'La contraseña debe incluir al menos una mayúscula.'
-    if (!/[a-z]/.test(p)) return 'La contraseña debe incluir al menos una minúscula.'
-    if (!/[0-9]/.test(p)) return 'La contraseña debe incluir al menos un número.'
-    return null
-}
+import { isValidEmail, passwordIssue } from '../utils/validation'
 
 export default function AuthPage() {
     const { settings } = useSettings()

@@ -29,3 +29,17 @@ export const validateImageUrl = (url: string | null | undefined): boolean => {
 
     return false;
 };
+
+/**
+ * Valida la fortaleza de una contraseña. Devuelve un mensaje de error si no
+ * cumple, o null si es válida. Regla única usada en registro, cambio de perfil
+ * y reset de contraseña.
+ */
+export const passwordIssue = (p: string | null | undefined): string | null => {
+    const pw = String(p || '');
+    if (pw.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+    if (!/[A-Z]/.test(pw)) return 'La contraseña debe incluir al menos una mayúscula.';
+    if (!/[a-z]/.test(pw)) return 'La contraseña debe incluir al menos una minúscula.';
+    if (!/[0-9]/.test(pw)) return 'La contraseña debe incluir al menos un número.';
+    return null;
+};

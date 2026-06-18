@@ -8,7 +8,7 @@ import { verifyTurnstileToken } from '../utils/turnstile';
 import { JWT_SECRET, FRONTEND_URL, TURNSTILE_SECRET_KEY } from '../config/env';
 import { getNextMonday } from '../utils/dates';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email.service';
-import { validateImageUrl } from '../utils/validators';
+import { validateImageUrl, passwordIssue } from '../utils/validators';
 
 
 export const register = async (req: Request, res: Response) => {
@@ -30,9 +30,9 @@ export const register = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Correo electrónico inválido.' });
     }
 
-    const pw = String(password);
-    if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw)) {
-        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres, con mayúscula, minúscula y número.' });
+    const pwErr = passwordIssue(password);
+    if (pwErr) {
+        return res.status(400).json({ error: pwErr });
     }
 
     if (TURNSTILE_SECRET_KEY && !turnstileToken) {
@@ -288,6 +288,9 @@ export const resetPassword = async (req: Request, res: Response) => {
     const { token, password } = req.body || {};
     if (!token || !password) return res.status(400).json({ error: 'Token y contrasena son obligatorios' });
 
+    const pwErr = passwordIssue(password);
+    if (pwErr) return res.status(400).json({ error: pwErr });
+
     try {
         const resetEntry = await prisma.passwordReset.findUnique({
             where: { token },
@@ -360,6 +363,10 @@ export const updateProfile = async (req: Request, res: Response) => {
         if (newPassword) {
             if (!currentPassword) {
                 return res.status(400).json({ error: 'Se requiere la contraseña actual para establecer una nueva' });
+            }
+            const pwErr = passwordIssue(newPassword);
+            if (pwErr) {
+                return res.status(400).json({ error: pwErr });
             }
             const ok = bcrypt.compareSync(currentPassword, user.passwordHash);
             if (!ok) {

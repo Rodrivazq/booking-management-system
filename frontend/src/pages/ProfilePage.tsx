@@ -5,6 +5,7 @@ import apiFetch from '../api'
 import { useToast } from '../context/ToastContext'
 import ThemeToggle from '../components/ThemeToggle'
 import AvatarUploader from '../components/AvatarUploader'
+import { passwordIssue } from '../utils/validation'
 
 export default function ProfilePage() {
     const { user, setUser } = useAuthStore()
@@ -54,6 +55,10 @@ export default function ProfilePage() {
 
             if (activeTab === 'security') {
                 if (formData.newPassword) {
+                    const pwIssue = passwordIssue(formData.newPassword)
+                    if (pwIssue) {
+                        throw new Error(pwIssue)
+                    }
                     if (formData.newPassword !== formData.confirmNewPassword) {
                         throw new Error('Las nuevas contraseñas no coinciden')
                     }
@@ -200,6 +205,9 @@ export default function ProfilePage() {
                                         onChange={handleChange}
                                         placeholder="••••••••"
                                     />
+                                    <small className="muted" style={{ fontSize: '0.8rem', display: 'block', marginTop: '0.35rem' }}>
+                                        Mínimo 8 caracteres, con al menos una mayúscula, una minúscula y un número.
+                                    </small>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem' }}>Confirmar Nueva Contraseña</label>
