@@ -141,6 +141,13 @@ export const sendAdminCreatedUserEmail = async (user: { name: string; email: str
 };
 
 async function sendEmail(to: string, subject: string, text: string, html: string) {
+    // Nunca enviar a direcciones no enrutables (cuentas demo @*.local): rebotan
+    // y ensucian la reputación/cuota del proveedor.
+    if (typeof to === 'string' && to.toLowerCase().endsWith('.local')) {
+        logger.warn(`[Email Service] Dirección no enrutable, se omite el envío: ${to} (${subject}).`);
+        return false;
+    }
+
     // Hard ceiling: refuse to send if the rolling 24h quota is exhausted.
     // Only enforced in production so dev/test runs don't trip on the
     // counter accumulating across many test cases.

@@ -77,7 +77,9 @@ export const startReminderCron = async () => {
 
             for (const user of usersWithoutReservation) {
                 if (!user.email) continue;
-                
+                // Saltear cuentas demo / no enrutables (rebotan y ensucian Resend).
+                if (user.email.toLowerCase().endsWith('.local')) continue;
+
                 try {
                     const subject = `[Aviso] Último día para reservar menú - ${companyName}`;
                     const customMessage = `
