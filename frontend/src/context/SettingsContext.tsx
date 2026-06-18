@@ -31,7 +31,7 @@ const defaultSettings: Settings = {
     secondaryColor: '#1e293b',
     deadlineDay: 3,
     deadlineTime: '23:59',
-    supportEmail: 'soporte@empresa.com',
+    supportEmail: 'soporte@reservasrealsabor.com.uy',
     supportPhone: '',
     welcomeTitle: 'Sistema de Reservas Corporativo',
     welcomeMessage: 'Gestiona tus comidas diarias de forma eficiente. Planifica tu semana y disfruta de un servicio de comedor de primera clase.',

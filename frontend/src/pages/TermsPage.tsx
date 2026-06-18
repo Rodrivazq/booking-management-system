@@ -7,7 +7,7 @@ const UPDATED = '18 de junio de 2026';
 export default function TermsPage() {
     const { settings } = useSettings();
     const company = settings.companyName || 'Real Sabor';
-    const email = settings.supportEmail || 'soporte@empresa.com';
+    const email = settings.supportEmail || 'soporte@reservasrealsabor.com.uy';
 
     const h = { color: 'var(--accent)', marginTop: '2rem', marginBottom: '0.75rem', fontSize: '1.15rem' } as const;
     const p = { lineHeight: 1.7, marginBottom: '0.75rem', color: 'var(--text)' } as const;
