@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../hooks/useAuthStore'
 import HelpButton from './HelpButton'
 import ThemeToggle from './ThemeToggle'
@@ -20,7 +20,12 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
     const logout = useAuthStore((state) => state.logout)
     const user = useAuthStore((state) => state.user)
     const navigate = useNavigate()
+    const location = useLocation()
     const { settings } = useSettings()
+
+    const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
+    const inAdminArea = location.pathname.startsWith('/admin')
+    const switchPanel = () => navigate(inAdminArea ? '/' : '/admin')
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [qrModalOpen, setQrModalOpen] = useState(false)
@@ -108,6 +113,17 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
 
                 <div className="hide-mobile app-header-actions">
                     <div className="app-header-tools">
+                        {user && isAdmin && (
+                            <button
+                                className="app-header-icon-btn"
+                                onClick={switchPanel}
+                                title={inAdminArea ? 'Ir a mi panel de usuario' : 'Ir al panel de administración'}
+                                style={{ width: 'auto', padding: '0 0.85rem', gap: '0.45rem', display: 'inline-flex', alignItems: 'center' }}
+                            >
+                                <Icon name={inAdminArea ? 'home' : 'settings'} size={17} />
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{inAdminArea ? 'Mi panel' : 'Panel admin'}</span>
+                            </button>
+                        )}
                         <ThemeToggle />
                         <button className="app-header-icon-btn" onClick={handleOpenQR} title="Compartir acceso" aria-label="Compartir acceso">
                             <Icon name="share" size={18} />
@@ -170,6 +186,15 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
                             Compartir app
                         </button>
 
+                        {user && isAdmin && (
+                            <button
+                                onClick={() => { switchPanel(); setMobileMenuOpen(false) }}
+                                className="btn btn-secondary"
+                                style={{ width: '100%', justifyContent: 'flex-start', gap: '0.5rem', border: 'none' }}
+                            >
+                                {inAdminArea ? 'Ir a mi panel de usuario' : 'Ir al panel de administración'}
+                            </button>
+                        )}
                         {user && (
                             <button
                                 onClick={() => { navigate('/profile'); setMobileMenuOpen(false) }}
