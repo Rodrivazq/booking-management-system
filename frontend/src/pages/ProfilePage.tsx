@@ -156,9 +156,11 @@ export default function ProfilePage() {
                                     <input
                                         className="input"
                                         name="phoneNumber"
+                                        type="tel"
+                                        inputMode="tel"
                                         value={formData.phoneNumber}
-                                        onChange={handleChange}
-                                        placeholder="+598 99 123 456"
+                                        onChange={e => setFormData({ ...formData, phoneNumber: e.target.value.replace(/[^\d+]/g, '') })}
+                                        placeholder="099123456"
                                     />
                                 </div>
                                 <div>

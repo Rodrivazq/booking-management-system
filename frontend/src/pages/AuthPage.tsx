@@ -518,8 +518,10 @@ export default function AuthPage() {
                                 <input
                                     className="input"
                                     name="phoneNumber"
+                                    type="tel"
+                                    inputMode="tel"
                                     value={formData.phoneNumber}
-                                    onChange={handleChange}
+                                    onChange={e => setFormData(prev => ({ ...prev, phoneNumber: e.target.value.replace(/[^\d+]/g, '') }))}
                                     placeholder="099123456"
                                 />
                             </div>

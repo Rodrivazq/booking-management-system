@@ -79,7 +79,7 @@ export const register = async (req: Request, res: Response) => {
                 role: 'user',
                 funcNumber: normalizedFunc,
                 documentId: normalizedDoc,
-                phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
+                phoneNumber: phoneNumber ? String(phoneNumber).replace(/[^\d+]/g, '').trim() || null : null,
                 photoUrl,
                 verificationToken,
                 isEmailVerified: false

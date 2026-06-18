@@ -1102,7 +1102,7 @@ export default function AdminDashboard() {
                                                     <input className="input" inputMode="numeric" placeholder="Solo números" value={newUser.documentId} onChange={e => setNewUser({ ...newUser, documentId: e.target.value.replace(/\D/g, '') })} />
                                                 </Field>
                                                 <Field label="Teléfono">
-                                                    <input className="input" placeholder="Opcional" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
+                                                    <input className="input" type="tel" inputMode="tel" placeholder="Opcional" value={newUser.phoneNumber} onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value.replace(/[^\d+]/g, '') })} />
                                                 </Field>
                                                 <Field label="Rol">
                                                     <select className="input" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value as any })}>
