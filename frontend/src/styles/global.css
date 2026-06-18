@@ -127,11 +127,33 @@ body {
   font-weight: 700;
 }
 
+/* Botón-ícono circular uniforme del header (tema, compartir, ayuda) */
+.app-header-icon-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
 .app-header-action:hover,
+.app-header-icon-btn:hover,
 .app-logout-button:hover,
 .app-avatar-button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* El logout sugiere acción de salida: hover en rojo */
+.app-logout-button:hover {
+  border-color: var(--error-text);
+  color: var(--error-text);
 }
 
 .app-avatar-button,

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../hooks/useAuthStore'
 import HelpButton from './HelpButton'
 import ThemeToggle from './ThemeToggle'
+import Icon from './Icon'
 import { useSettings } from '../context/SettingsContext'
 import AnnouncementBanner from './AnnouncementBanner'
 import apiFetch from '../api'
@@ -108,8 +109,8 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
                 <div className="hide-mobile app-header-actions">
                     <div className="app-header-tools">
                         <ThemeToggle />
-                        <button className="app-header-action" onClick={handleOpenQR} title="Compartir acceso">
-                            Compartir
+                        <button className="app-header-icon-btn" onClick={handleOpenQR} title="Compartir acceso" aria-label="Compartir acceso">
+                            <Icon name="share" size={18} />
                         </button>
                         <HelpButton />
                     </div>
@@ -131,8 +132,8 @@ export default function Layout({ children, title, subtitle, showLogout = true }:
                                 )}
                             </button>
                             {showLogout && (
-                                <button onClick={handleLogout} className="app-logout-button" title="Cerrar sesion">
-                                    ⏻
+                                <button onClick={handleLogout} className="app-logout-button" title="Cerrar sesión" aria-label="Cerrar sesión">
+                                    <Icon name="logout" size={18} />
                                 </button>
                             )}
                         </div>

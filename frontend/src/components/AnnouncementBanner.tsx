@@ -7,15 +7,32 @@ export default function AnnouncementBanner() {
     const [closed, setClosed] = useState(false);
 
     useEffect(() => {
-        if (settings.announcementMessage) {
-            setClosed(false);
-            // Small delay to trigger animation
-            const timer = setTimeout(() => setVisible(true), 100);
-            return () => clearTimeout(timer);
-        } else {
+        const msg = settings.announcementMessage;
+        if (!msg) {
             setVisible(false);
+            setClosed(false);
+            return;
         }
+        // Si el usuario ya cerró exactamente este mensaje, no lo mostramos de nuevo.
+        let dismissed: string | null = null;
+        try { dismissed = localStorage.getItem('dismissedAnnouncement'); } catch { /* ignore */ }
+        if (dismissed === msg) {
+            setClosed(true);
+            setVisible(false);
+            return;
+        }
+        setClosed(false);
+        // Small delay to trigger animation
+        const timer = setTimeout(() => setVisible(true), 100);
+        return () => clearTimeout(timer);
     }, [settings.announcementMessage]);
+
+    // Cierra de verdad: desvanece, recuerda el mensaje cerrado y lo saca del DOM.
+    const handleClose = () => {
+        try { localStorage.setItem('dismissedAnnouncement', settings.announcementMessage || ''); } catch { /* ignore */ }
+        setVisible(false);
+        setTimeout(() => setClosed(true), 400);
+    };
 
     if (!settings.announcementMessage || closed) return null;
 
@@ -101,8 +118,9 @@ export default function AnnouncementBanner() {
                 </div>
             </div>
 
-            <button 
-                onClick={() => setVisible(false)}
+            <button
+                onClick={handleClose}
+                aria-label="Cerrar aviso"
                 style={{
                     background: 'transparent',
                     border: 'none',

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuthStore } from '../hooks/useAuthStore'
 import HelpModal from './HelpModal'
+import Icon from './Icon'
 
 interface HelpButtonProps {
     customTrigger?: React.ReactNode;
@@ -21,27 +22,12 @@ export default function HelpButton({ customTrigger }: HelpButtonProps) {
                 <div onClick={() => setIsOpen(true)}>{customTrigger}</div>
             ) : (
                 <button
-                    className="btn btn-secondary btn-sm"
+                    className="app-header-icon-btn"
                     onClick={() => setIsOpen(true)}
                     title="Ayuda y Documentación"
                     aria-label="Ayuda y Documentación"
-                    style={{
-                        width: '2.5rem',
-                        height: '2.5rem',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.25rem',
-                        padding: 0,
-                        border: '1px solid var(--border)',
-                        background: 'var(--card)',
-                        color: 'var(--accent)',
-                        fontWeight: 'bold',
-                        boxShadow: 'var(--shadow-sm)'
-                    }}
                 >
-                    ?
+                    <Icon name="help" size={18} />
                 </button>
             )}
 

@@ -17,6 +17,11 @@ export const register = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
     }
 
+    // La foto de perfil es obligatoria en el auto-registro.
+    if (!photoUrl || !String(photoUrl).trim()) {
+        return res.status(400).json({ error: 'La foto de perfil es obligatoria.' });
+    }
+
     if (!validateImageUrl(photoUrl)) {
         return res.status(400).json({ error: 'URL de imagen inválida o demasiado larga. No se permiten imágenes base64.' });
     }

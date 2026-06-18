@@ -57,7 +57,7 @@ describe('Auth Controller (Unit Tests)', () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Registro exitoso') }));
   });
 
-  it('registers a new user successfully without photoUrl (photo feature disabled)', async () => {
+  it('rechaza el registro sin foto de perfil (ahora es obligatoria)', async () => {
     const req = {
       body: {
         name: 'No Photo User',
@@ -69,13 +69,11 @@ describe('Auth Controller (Unit Tests)', () => {
     } as any;
     const res = { json: vi.fn(), status: vi.fn().mockReturnThis() } as any;
 
-    prismaMock.user.findUnique.mockResolvedValue(null);
-    prismaMock.user.create.mockResolvedValue({ id: 'usr-nophoto' } as any);
-
     await register(req, res);
 
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Registro exitoso') }));
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('foto de perfil es obligatoria') }));
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 
   it('rejects registration with base64 image', async () => {

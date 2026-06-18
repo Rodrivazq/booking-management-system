@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '../hooks/useAuthStore'
 import apiFetch from '../api'
 import ThemeToggle from '../components/ThemeToggle'
+import AvatarUploader from '../components/AvatarUploader'
 import { useToast } from '../context/ToastContext'
 import { Turnstile } from '@marsidev/react-turnstile'
 
@@ -67,6 +68,10 @@ export default function AuthPage() {
 
             if (!isLogin && formData.password !== formData.confirmPassword) {
                 throw new Error('Las contraseñas no coinciden')
+            }
+
+            if (!isLogin && !formData.photoUrl) {
+                throw new Error('Subí una foto de perfil para continuar.')
             }
 
             if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken) {
@@ -385,6 +390,20 @@ export default function AuthPage() {
                         </div>
                     ) : (
                         <>
+                            <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 500 }}>
+                                    Foto de perfil <span style={{ color: 'var(--error-text)' }}>*</span>
+                                </label>
+                                <AvatarUploader
+                                    currentPhotoUrl={formData.photoUrl}
+                                    onPhotoChange={(url) => setFormData(prev => ({ ...prev, photoUrl: url }))}
+                                    nameForInitials={formData.name || 'U'}
+                                    size="110px"
+                                />
+                                <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                    Obligatoria. Elegí una foto y ajustá el recorte.
+                                </p>
+                            </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre Completo</label>
                                 <input

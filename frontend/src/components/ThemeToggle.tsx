@@ -1,4 +1,5 @@
 import { useTheme } from '../context/ThemeContext'
+import Icon from './Icon'
 
 export default function ThemeToggle() {
     const { theme, toggleTheme } = useTheme()
@@ -6,20 +7,11 @@ export default function ThemeToggle() {
     return (
         <button
             onClick={toggleTheme}
-            className="btn btn-secondary btn-icon"
-            style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%'
-            }}
+            className="app-header-icon-btn"
             aria-label="Cambiar tema"
-            title="Cambiar tema"
+            title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
         >
-            {theme === 'light' ? '🌙' : '☀️'}
+            <Icon name={theme === 'light' ? 'moon' : 'sun'} size={18} />
         </button>
     )
 }
