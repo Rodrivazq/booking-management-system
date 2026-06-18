@@ -39,6 +39,23 @@ describe('getPendingRatings', () => {
         expect(data.find((p: any) => p.itemName === 'Helado')).toBeTruthy();
     });
 
+    it('excluye días anteriores a la creación de la reserva (alta a mitad de semana)', async () => {
+        const { req, res } = makeReqRes();
+        prismaMock.reservation.findMany.mockResolvedValue([
+            {
+                weekStart: PAST_WEEK,
+                createdAt: new Date('2021-01-01T00:00:00Z'), // mucho después de esa semana
+                selections: JSON.stringify([{ day: 'lunes', meal: 'Milanesa', dessert: 'Flan' }]),
+            },
+        ] as any);
+        prismaMock.dishRating.findMany.mockResolvedValue([] as any);
+
+        await getPendingRatings(req, res);
+
+        // La reserva se creó después: ese día no se pudo comer → nada calificable.
+        expect(res.json).toHaveBeenCalledWith([]);
+    });
+
     it('no incluye días aún no servidos (semana futura)', async () => {
         const { req, res } = makeReqRes();
         prismaMock.reservation.findMany.mockResolvedValue([

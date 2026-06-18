@@ -12,8 +12,8 @@ const fakeReservation = {
     userId: 'usr-1',
     weekStart: WEEK,
     timeSlot: '12:00',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: new Date('2025-01-01T00:00:00Z'), // reserva hecha antes de la semana
+    updatedAt: new Date('2025-01-01T00:00:00Z'),
     selections: JSON.stringify([
         { day: 'lunes', meal: 'Milanesa', dessert: 'Flan', bread: true },
         { day: 'martes', meal: 'Pollo', dessert: 'Fruta', bread: false },

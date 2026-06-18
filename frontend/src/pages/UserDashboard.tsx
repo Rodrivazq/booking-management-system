@@ -593,6 +593,7 @@ export default function UserDashboard() {
                             <RatingSection
                                 reservation={{ week: currentRes.week, selections: currentRes.selections }}
                                 currentWeek={dates.current}
+                                reservationCreatedAt={(currentRes as any).createdAt}
                                 ratings={ratings}
                                 onRate={handleRate}
                             />
@@ -780,16 +781,19 @@ function PendingRatingsPanel({
 function RatingSection({
     reservation,
     currentWeek,
+    reservationCreatedAt,
     ratings,
     onRate,
 }: {
     reservation: { week: string; selections: Array<{ day: string; meal: string; dessert: string }> }
     currentWeek: string
+    reservationCreatedAt?: string
     ratings: Record<string, string>
     onRate: (day: string, itemType: string, itemName: string, rating: string) => Promise<void>
 }) {
     // Only show days that have already passed (including today)
     const today = new Date()
+    const createdAt = reservationCreatedAt ? new Date(reservationCreatedAt) : null
     const DAYS_ES = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
     const [wY, wM, wD] = currentWeek.split('-').map(Number)
 
@@ -798,7 +802,10 @@ function RatingSection({
         if (idx === -1) return false
         const mealDate = new Date(wY, wM - 1, wD + idx)
         mealDate.setHours(23, 59, 59, 999)
-        return today >= mealDate
+        if (today < mealDate) return false
+        // No calificar días anteriores a la reserva (alta a mitad de semana).
+        if (createdAt && createdAt > mealDate) return false
+        return true
     })
 
     if (rateableDays.length === 0) {

@@ -66,7 +66,7 @@ export async function getPendingRatings(req: Request, res: Response) {
         const [reservations, existingRatings] = await Promise.all([
             prisma.reservation.findMany({
                 where: { userId, weekStart: { gte: cutoff } },
-                select: { weekStart: true, selections: true },
+                select: { weekStart: true, selections: true, createdAt: true },
             }),
             prisma.dishRating.findMany({
                 where: { userId, weekStart: { gte: cutoff } },
@@ -99,6 +99,11 @@ export async function getPendingRatings(req: Request, res: Response) {
                 const mealDate = new Date(y, m - 1, d + dayIndex);
                 mealDate.setHours(0, 0, 0, 0);
                 if (now < mealDate) continue; // todavía no servido
+
+                // Si la reserva se creó DESPUÉS de que terminó ese día, el usuario
+                // no pudo haberlo comido (alta a mitad de semana): no es calificable.
+                const mealEnd = new Date(y, m - 1, d + dayIndex, 23, 59, 59, 999);
+                if (r.createdAt && r.createdAt > mealEnd) continue;
 
                 for (const itemType of VALID_ITEM_TYPES) {
                     const itemName = itemType === 'meal' ? sel.meal : sel.dessert;
@@ -190,6 +195,13 @@ export async function upsertRating(req: Request, res: Response) {
             return res.status(403).json({
                 error: `Solo puedes calificar platos a partir del día correspondiente (${day})`,
             });
+        }
+
+        // No se puede calificar un día que ocurrió antes de existir la reserva
+        // (altas a mitad de semana habilitadas por un admin).
+        const mealEnd = new Date(y, m - 1, d_ + dayIndex, 23, 59, 59, 999);
+        if (reservation.createdAt && reservation.createdAt > mealEnd) {
+            return res.status(403).json({ error: 'No podés calificar un día anterior a tu reserva.' });
         }
 
         // — Upsert
