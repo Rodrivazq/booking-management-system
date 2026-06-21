@@ -229,12 +229,15 @@ export default function AdminDashboard() {
         apiFetch<{ meals: string[]; desserts: string[]; catalog?: { meals: CatalogItem[]; desserts: CatalogItem[] } }>('/api/menu/catalog')
             .then(d => {
                 if (cancelled) return
+                // Fallback: si el backend aún no devuelve `catalog` (versión vieja),
+                // armamos la lista desde los nombres (sin conteo) para no verse vacío.
+                const fromNames = (arr?: string[]): CatalogItem[] => (arr || []).map(name => ({ name, count: 0 }))
                 setMenuCatalog({
                     meals: d.meals || [],
                     desserts: d.desserts || [],
                     catalog: {
-                        meals: d.catalog?.meals || [],
-                        desserts: d.catalog?.desserts || [],
+                        meals: d.catalog?.meals?.length ? d.catalog.meals : fromNames(d.meals),
+                        desserts: d.catalog?.desserts?.length ? d.catalog.desserts : fromNames(d.desserts),
                     },
                 })
             })
@@ -986,7 +989,7 @@ export default function AdminDashboard() {
                                                 <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.5rem 0.75rem' }}>
                                                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.name}>{item.name}</span>
                                                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                                                        <span className="badge badge-gray" title="Veces usado en menús">{item.count}×</span>
+                                                        {item.count > 0 && <span className="badge badge-gray" title="Veces usado en menús">{item.count}×</span>}
                                                         <button
                                                             type="button"
                                                             className="btn btn-secondary btn-sm"
