@@ -206,13 +206,23 @@ export default function AuthPage() {
     return (
         <div className="auth-container">
             {/* Left Side - Hero */}
-            <div className="auth-hero" style={settings.loginBackgroundImage ? { backgroundImage: `url(${settings.loginBackgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-                <div className="auth-hero-content" style={settings.loginBackgroundImage ? { background: 'rgba(0,0,0,0.6)', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '4rem' } : {}}>
-                    {settings.logoUrl ? (
-                        <img src={settings.logoUrl} alt="Logo" className="premium-logo" style={{ width: '8rem', height: '8rem', padding: '12px', marginBottom: '2rem' }} />
-                    ) : (
-                        <img src="/assets/logo_real_sabor_clean.png" alt="Logo" className="premium-logo" style={{ width: '8rem', height: '8rem', padding: '12px', marginBottom: '2rem' }} />
-                    )}
+            <div
+                className="auth-hero"
+                style={{
+                    // Composita el overlay oscuro (legibilidad) + la imagen en UNA capa:
+                    // así la imagen configurada en Configuración se ve siempre, sin que
+                    // la tapen capas hardcodeadas. Cae al fondo por defecto si no hay una.
+                    backgroundImage: `linear-gradient(135deg, rgba(15,23,42,0.82), rgba(15,23,42,0.5)), url("${settings.loginBackgroundImage || '/assets/background.png'}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                }}
+            >
+                <div className="auth-hero-content">
+                    <img
+                        src={settings.logoUrl || '/assets/logo_real_sabor_clean.png'}
+                        alt="Logo"
+                        style={{ height: '5.5rem', width: 'auto', maxWidth: '15rem', objectFit: 'contain', background: 'rgba(255,255,255,0.92)', borderRadius: 14, padding: 12, marginBottom: '2rem' }}
+                    />
                     <h1>{settings.welcomeTitle || settings.companyName}</h1>
                     <p>{settings.welcomeMessage || 'Gestioná tus comidas semanales de forma simple. Elegí tu menú, recibí recordatorios y dejá tu opinión.'}</p>
 
@@ -387,6 +397,14 @@ export default function AuthPage() {
                     </div>
                 ) : (
                     <>
+                {/* Logo de marca para mobile/tablet, donde el hero está oculto */}
+                <div className="auth-mobile-brand">
+                    <img
+                        src={settings.logoUrl || '/assets/logo_real_sabor_clean.png'}
+                        alt="Logo"
+                        style={{ height: '3.5rem', width: 'auto', maxWidth: '12rem', objectFit: 'contain' }}
+                    />
+                </div>
                 <div className="auth-header" style={{ marginTop: '2.5rem' }}>
                     <h2>{isLogin ? 'Bienvenido de nuevo' : 'Crear Cuenta'}</h2>
                     <p className="muted">

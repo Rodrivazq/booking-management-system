@@ -1199,34 +1199,9 @@ p {
   /* Full height */
 }
 
-/* ... (Image Layer and Gradient Overlay Layer remain the same, skipping for brevity in replacement if not changing) ... */
-/* Actually, I need to include them if I'm replacing the block, or use a smaller chunk. 
-   Let's use a smaller chunk for the container and hero base. */
-
-/* Image Layer */
-.auth-hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('/assets/background.png') center/cover;
-  opacity: 0.6;
-  z-index: -2;
-}
-
-/* Gradient Overlay Layer */
-.auth-hero::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(21, 128, 61, 0.9), rgba(15, 23, 42, 0.9));
-  z-index: -1;
-}
+/* El fondo del hero (overlay + imagen configurable) se compone inline en
+   AuthPage.tsx para que la imagen elegida en Configuración se vea siempre.
+   Antes había dos capas ::before/::after hardcodeadas que la tapaban. */
 
 .auth-hero-content {
   position: relative;
@@ -1275,6 +1250,13 @@ p {
   margin-bottom: 0.5rem;
 }
 
+/* Logo de marca visible solo cuando el hero está oculto (mobile/tablet). */
+.auth-mobile-brand {
+  display: flex;
+  justify-content: center;
+  padding: 2.25rem 0 0.25rem;
+}
+
 @media (min-width: 1024px) {
   .auth-container {
     grid-template-columns: 1.2fr 1fr;
@@ -1282,6 +1264,17 @@ p {
 
   .auth-hero {
     display: flex;
+  }
+
+  .auth-mobile-brand {
+    display: none;
+  }
+}
+
+/* Cuando el logo mobile está presente, el header no necesita su margen superior. */
+@media (max-width: 1023px) {
+  .auth-mobile-brand + .auth-header {
+    margin-top: 0.75rem !important;
   }
 }
 
