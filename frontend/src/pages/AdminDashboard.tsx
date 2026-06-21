@@ -14,6 +14,23 @@ import Icon from '../components/Icon'
 import ConfirmDialog, { type ConfirmOptions } from '../components/ConfirmDialog'
 
 const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+
+type CatalogItem = { name: string; count: number }
+
+// Resumen del menú seleccionado: platos cargados, días completos y faltantes.
+function computeMenuStats(menu: any) {
+    let total = 0
+    let configured = 0
+    const incomplete: string[] = []
+    for (const day of DAYS) {
+        const meals = (menu?.days?.[day]?.meals || []).filter((x: string) => String(x || '').trim())
+        const desserts = (menu?.days?.[day]?.desserts || []).filter((x: string) => String(x || '').trim())
+        total += meals.length + desserts.length
+        if (meals.length > 0 && desserts.length > 0) configured++
+        else incomplete.push(day)
+    }
+    return { total, configured, incomplete }
+}
 type UserRole = User['role']
 const USER_ROLES: UserRole[] = ['user', 'admin', 'superadmin']
 
@@ -113,7 +130,10 @@ export default function AdminDashboard() {
     const [weekSummary, setWeekSummary] = useState<ReservasSummary | null>(null)
 
     // Catálogo de platos ya usados (autocompletado en la pestaña Menú)
-    const [menuCatalog, setMenuCatalog] = useState<{ meals: string[]; desserts: string[] }>({ meals: [], desserts: [] })
+    const [menuCatalog, setMenuCatalog] = useState<{ meals: string[]; desserts: string[]; catalog: { meals: CatalogItem[]; desserts: CatalogItem[] } }>({ meals: [], desserts: [], catalog: { meals: [], desserts: [] } })
+    const [catalogQuery, setCatalogQuery] = useState('')
+    const [catalogFilter, setCatalogFilter] = useState<'meals' | 'desserts'>('meals')
+    const [catalogOpen, setCatalogOpen] = useState(false)
 
     // Overview de usuarios + perfil de gustos del usuario abierto en el modal
     const [usersOverview, setUsersOverview] = useState<UsersOverview | null>(null)
@@ -206,8 +226,18 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (activeTab !== 'menu') return
         let cancelled = false
-        apiFetch<{ meals: string[]; desserts: string[] }>('/api/menu/catalog')
-            .then(d => { if (!cancelled) setMenuCatalog({ meals: d.meals || [], desserts: d.desserts || [] }) })
+        apiFetch<{ meals: string[]; desserts: string[]; catalog?: { meals: CatalogItem[]; desserts: CatalogItem[] } }>('/api/menu/catalog')
+            .then(d => {
+                if (cancelled) return
+                setMenuCatalog({
+                    meals: d.meals || [],
+                    desserts: d.desserts || [],
+                    catalog: {
+                        meals: d.catalog?.meals || [],
+                        desserts: d.catalog?.desserts || [],
+                    },
+                })
+            })
             .catch(e => console.error('menu catalog error', e))
         return () => { cancelled = true }
     }, [activeTab])
@@ -888,6 +918,94 @@ export default function AdminDashboard() {
                                 )}
                             </div>
                         </div>
+                    </div>
+
+                    {/* Resumen del menú seleccionado */}
+                    {(() => {
+                        const stats = menuData[menuType] ? computeMenuStats(menuData[menuType]) : null
+                        const kpis = [
+                            { label: 'Días completos', value: stats ? `${stats.configured}/5` : '—' },
+                            { label: 'Platos en la semana', value: stats ? String(stats.total) : '—' },
+                            { label: 'Catálogo · comidas', value: String(menuCatalog.catalog.meals.length) },
+                            { label: 'Catálogo · postres', value: String(menuCatalog.catalog.desserts.length) },
+                        ]
+                        return (
+                            <div className="admin-panel">
+                                <div className="admin-panel-header">
+                                    <p className="admin-panel-title">Resumen del menú</p>
+                                </div>
+                                <div className="admin-panel-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                                    {kpis.map(k => (
+                                        <div key={k.label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.85rem 1rem' }}>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)' }}>{k.value}</div>
+                                            <div className="muted" style={{ fontSize: '0.8rem' }}>{k.label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {stats && stats.incomplete.length > 0 && (
+                                    <div className="admin-panel-body" style={{ paddingTop: 0 }}>
+                                        <span className="badge" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
+                                            Faltan platos en: {stats.incomplete.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })()}
+
+                    {/* Catálogo de platos usados (solo lectura) */}
+                    <div className="admin-panel">
+                        <div className="admin-panel-header" style={{ cursor: 'pointer' }} onClick={() => setCatalogOpen(o => !o)}>
+                            <div>
+                                <p className="admin-panel-title">Catálogo de platos</p>
+                                <p className="admin-section-subtitle">
+                                    {menuCatalog.catalog.meals.length} comidas · {menuCatalog.catalog.desserts.length} postres usados en menús anteriores
+                                </p>
+                            </div>
+                            <button type="button" className="btn btn-secondary btn-sm">{catalogOpen ? 'Ocultar' : 'Ver catálogo'}</button>
+                        </div>
+                        {catalogOpen && (
+                            <div className="admin-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    <div className="week-pills">
+                                        <button className={`week-pill ${catalogFilter === 'meals' ? 'active' : ''}`} onClick={() => setCatalogFilter('meals')}>Comidas</button>
+                                        <button className={`week-pill ${catalogFilter === 'desserts' ? 'active' : ''}`} onClick={() => setCatalogFilter('desserts')}>Postres</button>
+                                    </div>
+                                    <input className="input" placeholder="Buscar plato…" value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
+                                </div>
+                                {(() => {
+                                    const items = catalogFilter === 'meals' ? menuCatalog.catalog.meals : menuCatalog.catalog.desserts
+                                    const q = catalogQuery.trim().toLowerCase()
+                                    const filtered = q ? items.filter(i => i.name.toLowerCase().includes(q)) : items
+                                    if (filtered.length === 0) {
+                                        return <p className="muted" style={{ margin: 0 }}>{items.length === 0 ? 'Todavía no hay platos en el catálogo.' : 'No hay platos que coincidan con la búsqueda.'}</p>
+                                    }
+                                    return (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.5rem', maxHeight: 360, overflowY: 'auto' }}>
+                                            {filtered.map(item => (
+                                                <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.5rem 0.75rem' }}>
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.name}>{item.name}</span>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                                                        <span className="badge badge-gray" title="Veces usado en menús">{item.count}×</span>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-secondary btn-sm"
+                                                            title="Copiar nombre del plato"
+                                                            onClick={() => { navigator.clipboard?.writeText(item.name); success(`"${item.name}" copiado`) }}
+                                                        >
+                                                            Copiar
+                                                        </button>
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )
+                                })()}
+                                <p className="muted" style={{ fontSize: '0.8rem', margin: 0 }}>
+                                    Solo lectura. Copiá un plato y pegalo en cualquier casilla del menú; al escribir en una casilla también se autocompleta desde este catálogo.
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Aviso al editar la semana en curso */}

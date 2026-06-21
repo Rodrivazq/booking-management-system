@@ -33,8 +33,13 @@ export const getMenu = async (req: Request, res: Response) => {
 export const getMenuCatalog = async (_req: Request, res: Response) => {
     try {
         const menus = await prisma.weeklyMenu.findMany({ select: { days: true } });
-        const meals = new Set<string>();
-        const desserts = new Set<string>();
+        const meals = new Map<string, number>();
+        const desserts = new Map<string, number>();
+
+        const bump = (map: Map<string, number>, raw: any) => {
+            const s = String(raw || '').trim();
+            if (s) map.set(s, (map.get(s) || 0) + 1);
+        };
 
         for (const m of menus) {
             let days: any;
@@ -42,20 +47,26 @@ export const getMenuCatalog = async (_req: Request, res: Response) => {
             for (const day of DAY_KEYS) {
                 const entry = days?.[day];
                 if (!entry) continue;
-                (Array.isArray(entry.meals) ? entry.meals : []).forEach((x: any) => {
-                    const s = String(x || '').trim();
-                    if (s) meals.add(s);
-                });
-                (Array.isArray(entry.desserts) ? entry.desserts : []).forEach((x: any) => {
-                    const s = String(x || '').trim();
-                    if (s) desserts.add(s);
-                });
+                (Array.isArray(entry.meals) ? entry.meals : []).forEach((x: any) => bump(meals, x));
+                (Array.isArray(entry.desserts) ? entry.desserts : []).forEach((x: any) => bump(desserts, x));
             }
         }
 
+        // Nombres ordenados alfabéticamente (es) para el autocompletado; detalle con
+        // conteos ordenado por uso descendente para el catálogo de gestión.
+        const names = (map: Map<string, number>) => Array.from(map.keys()).sort((a, b) => a.localeCompare(b, 'es'));
+        const detailed = (map: Map<string, number>) =>
+            Array.from(map.entries())
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'es'));
+
         res.json({
-            meals: Array.from(meals).sort((a, b) => a.localeCompare(b, 'es')),
-            desserts: Array.from(desserts).sort((a, b) => a.localeCompare(b, 'es')),
+            meals: names(meals),
+            desserts: names(desserts),
+            catalog: {
+                meals: detailed(meals),
+                desserts: detailed(desserts),
+            },
         });
     } catch (error) {
         console.error('Get menu catalog error:', error);
