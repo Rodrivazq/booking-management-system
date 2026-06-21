@@ -215,6 +215,7 @@ export default function AuthPage() {
                     style={{
                         backgroundImage: `url("${settings.loginBackgroundImage || '/assets/background.png'}")`,
                         filter: settings.loginBackgroundBlur ? `blur(${settings.loginBackgroundBlur}px)` : undefined,
+                        transform: settings.loginBackgroundBlur ? `scale(${1 + settings.loginBackgroundBlur / 100})` : 'none',
                     }}
                 />
                 {/* Capa de oscurecido graduable, con el color de tinte elegido. */}

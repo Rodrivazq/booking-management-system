@@ -209,7 +209,7 @@ export default function AdminSettingsPage() {
                             <div>
                                 <label style={labelStyle}>Vista previa</label>
                                 <div style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)', minHeight: 150 }}>
-                                    <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${formData.loginBackgroundImage || '/assets/background.png'}")`, backgroundSize: 'cover', backgroundPosition: 'center', filter: formData.loginBackgroundBlur ? `blur(${formData.loginBackgroundBlur}px)` : undefined, transform: 'scale(1.1)' }} />
+                                    <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${formData.loginBackgroundImage || '/assets/background.png'}")`, backgroundSize: 'cover', backgroundPosition: 'center', filter: formData.loginBackgroundBlur ? `blur(${formData.loginBackgroundBlur}px)` : undefined, transform: formData.loginBackgroundBlur ? `scale(${1 + formData.loginBackgroundBlur / 100})` : 'none' }} />
                                     <div style={{ position: 'absolute', inset: 0, background: hexToRgba(formData.loginBackgroundColor || '#1e293b', formData.loginBackgroundDim / 100) }} />
                                     <div style={{ position: 'relative', padding: '1.5rem', textAlign: 'center' }}>
                                         {formData.logoUrl

@@ -1207,7 +1207,8 @@ p {
   inset: 0;
   background-size: cover;
   background-position: center;
-  transform: scale(1.1);
+  /* El scale (para tapar bordes del desenfoque) se aplica inline y solo cuando
+     hay blur, proporcional a su intensidad. Sin blur no hay zoom. */
   z-index: -2;
 }
 
