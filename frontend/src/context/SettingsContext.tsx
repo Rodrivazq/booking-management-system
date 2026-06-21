@@ -15,6 +15,7 @@ interface Settings {
     loginBackgroundImage: string;
     loginBackgroundBlur: number;
     loginBackgroundDim: number;
+    loginBackgroundColor: string;
     maintenanceMode: boolean;
     announcementMessage: string;
     announcementType: 'info' | 'warning' | 'error';
@@ -40,6 +41,7 @@ const defaultSettings: Settings = {
     loginBackgroundImage: '',
     loginBackgroundBlur: 0,
     loginBackgroundDim: 55,
+    loginBackgroundColor: '#1e293b',
     maintenanceMode: false,
     announcementMessage: '',
     announcementType: 'info'

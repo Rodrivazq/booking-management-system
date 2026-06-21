@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext'
 import { Turnstile } from '@marsidev/react-turnstile'
 
 import { useSettings } from '../context/SettingsContext'
+import { hexToRgba } from '../utils/color'
 import { isValidEmail, passwordIssue } from '../utils/validation'
 
 export default function AuthPage() {
@@ -216,18 +217,18 @@ export default function AuthPage() {
                         filter: settings.loginBackgroundBlur ? `blur(${settings.loginBackgroundBlur}px)` : undefined,
                     }}
                 />
-                {/* Capa de oscurecido graduable (legibilidad del texto). */}
+                {/* Capa de oscurecido graduable, con el color de tinte elegido. */}
                 <div
                     className="auth-hero-dim"
                     style={{
-                        background: `linear-gradient(135deg, rgba(15,23,42,${(settings.loginBackgroundDim ?? 55) / 100}), rgba(15,23,42,${((settings.loginBackgroundDim ?? 55) / 100) * 0.7}))`,
+                        background: `linear-gradient(135deg, ${hexToRgba(settings.loginBackgroundColor || '#1e293b', (settings.loginBackgroundDim ?? 55) / 100)}, ${hexToRgba(settings.loginBackgroundColor || '#1e293b', ((settings.loginBackgroundDim ?? 55) / 100) * 0.7)})`,
                     }}
                 />
                 <div className="auth-hero-content">
                     <img
                         src={settings.logoUrl || '/assets/logo_real_sabor_clean.png'}
                         alt="Logo"
-                        style={{ height: '5.5rem', width: 'auto', maxWidth: '15rem', objectFit: 'contain', background: 'rgba(255,255,255,0.92)', borderRadius: 14, padding: 12, marginBottom: '2rem' }}
+                        style={{ height: '6rem', width: 'auto', maxWidth: '15rem', objectFit: 'contain', marginBottom: '2rem', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))' }}
                     />
                     <h1>{settings.welcomeTitle || settings.companyName}</h1>
                     <p>{settings.welcomeMessage || 'Gestioná tus comidas semanales de forma simple. Elegí tu menú, recibí recordatorios y dejá tu opinión.'}</p>

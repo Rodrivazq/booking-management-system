@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import Icon from '../components/Icon';
 import ImageUploadField from '../components/ImageUploadField';
+import { hexToRgba, OVERLAY_PALETTE } from '../utils/color';
 import { useSettings } from '../context/SettingsContext';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +49,7 @@ export default function AdminSettingsPage() {
         loginBackgroundImage: settings.loginBackgroundImage || '',
         loginBackgroundBlur: settings.loginBackgroundBlur ?? 0,
         loginBackgroundDim: settings.loginBackgroundDim ?? 55,
+        loginBackgroundColor: settings.loginBackgroundColor || '#1e293b',
         maintenanceMode: settings.maintenanceMode || false,
         announcementMessage: settings.announcementMessage || '',
         announcementType: (settings.announcementType || 'info') as AnnouncementType
@@ -172,12 +174,43 @@ export default function AdminSettingsPage() {
                                 </div>
                             </div>
 
+                            {/* Color del tinte del oscurecido (paleta + personalizado) */}
+                            <div>
+                                <label style={labelStyle}>Color del tinte</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    {OVERLAY_PALETTE.map(c => {
+                                        const active = (formData.loginBackgroundColor || '').toLowerCase() === c.value.toLowerCase();
+                                        return (
+                                            <button
+                                                key={c.value}
+                                                type="button"
+                                                title={c.name}
+                                                onClick={() => set('loginBackgroundColor', c.value)}
+                                                style={{
+                                                    width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', background: c.value,
+                                                    border: active ? '3px solid var(--accent)' : '2px solid var(--border)',
+                                                    boxShadow: active ? '0 0 0 2px var(--card)' : 'none', padding: 0,
+                                                }}
+                                            />
+                                        );
+                                    })}
+                                    <input
+                                        type="color"
+                                        value={formData.loginBackgroundColor || '#1e293b'}
+                                        onChange={e => set('loginBackgroundColor', e.target.value)}
+                                        title="Color personalizado"
+                                        style={{ width: 40, height: 32, padding: 0, border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', background: 'none' }}
+                                    />
+                                    <span className="muted" style={{ fontSize: '0.8rem' }}>{formData.loginBackgroundColor}</span>
+                                </div>
+                            </div>
+
                             {/* Vista previa en vivo (refleja imagen + desenfoque + oscurecido) */}
                             <div>
                                 <label style={labelStyle}>Vista previa</label>
                                 <div style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)', minHeight: 150 }}>
                                     <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${formData.loginBackgroundImage || '/assets/background.png'}")`, backgroundSize: 'cover', backgroundPosition: 'center', filter: formData.loginBackgroundBlur ? `blur(${formData.loginBackgroundBlur}px)` : undefined, transform: 'scale(1.1)' }} />
-                                    <div style={{ position: 'absolute', inset: 0, background: `rgba(15,23,42,${formData.loginBackgroundDim / 100})` }} />
+                                    <div style={{ position: 'absolute', inset: 0, background: hexToRgba(formData.loginBackgroundColor || '#1e293b', formData.loginBackgroundDim / 100) }} />
                                     <div style={{ position: 'relative', padding: '1.5rem', textAlign: 'center' }}>
                                         {formData.logoUrl
                                             ? <img src={formData.logoUrl} alt="logo" style={{ height: 44, objectFit: 'contain', marginBottom: '0.5rem' }} />
