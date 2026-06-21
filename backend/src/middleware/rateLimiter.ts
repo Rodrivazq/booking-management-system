@@ -34,7 +34,13 @@ export const loginLimiter = rateLimit({
 // active. Acá solo evitamos un blast obvio.
 export const registerLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 150,
+    // 400/15min: con ~200 empleados auto-registrándose desde la MISMA IP NAT
+    // corporativa el día del lanzamiento, un cap de 150 bloqueaba al registro
+    // 151+ si una buena parte caía en la misma franja de 15min. 400 deja 2x de
+    // headroom. La defensa contra abuso de envío de emails es independiente:
+    // (a) constraint único de email en DB, (b) daily quota global en
+    // email.service.ts (MAX_EMAILS_PER_DAY), (c) Turnstile cuando se active.
+    limit: 400,
     message: 'Demasiados intentos de registro desde esta red. Probá de nuevo en 15 minutos.',
     standardHeaders: true,
     legacyHeaders: false,
