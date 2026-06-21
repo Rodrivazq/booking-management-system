@@ -40,6 +40,15 @@ export const updateSettings = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'URL de imagen de fondo inválida o demasiado larga. No se permiten imágenes base64.' });
         }
 
+        // Clamp del difuminado a rangos seguros (evita filtros CSS absurdos).
+        const clampInt = (v: any, min: number, max: number) => Math.max(min, Math.min(max, Math.round(Number(v) || 0)));
+        if (newSettings.loginBackgroundBlur !== undefined) {
+            newSettings.loginBackgroundBlur = clampInt(newSettings.loginBackgroundBlur, 0, 20);
+        }
+        if (newSettings.loginBackgroundDim !== undefined) {
+            newSettings.loginBackgroundDim = clampInt(newSettings.loginBackgroundDim, 0, 100);
+        }
+
         const settings = await prisma.settings.upsert({
             where: { id: 1 },
             update: newSettings,

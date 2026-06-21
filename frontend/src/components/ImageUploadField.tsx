@@ -51,6 +51,7 @@ export default function ImageUploadField({ label, value, onChange, helpText, kin
         }
     };
 
+    const isWide = kind === 'wide';
     const previewBox: React.CSSProperties = kind === 'wide'
         ? { width: '100%', height: 90, borderRadius: 'var(--radius)' }
         : { width: 72, height: 72, borderRadius: 12 };
@@ -61,7 +62,7 @@ export default function ImageUploadField({ label, value, onChange, helpText, kin
 
             <input ref={inputRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
 
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.6rem' }}>
+            <div style={{ display: 'flex', flexDirection: isWide ? 'column' : 'row', gap: '0.75rem', alignItems: isWide ? 'stretch' : 'center', marginBottom: '0.6rem' }}>
                 <div
                     style={{
                         ...previewBox,
@@ -81,7 +82,7 @@ export default function ImageUploadField({ label, value, onChange, helpText, kin
                         : <Icon name="image" size={24} style={{ color: 'var(--text-light)' }} />}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', flexDirection: isWide ? 'row' : 'column', gap: '0.4rem', flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn-secondary" onClick={pick} disabled={uploading} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                         <Icon name="image" size={15} />
                         {uploading ? 'Subiendo…' : (value ? 'Cambiar imagen' : 'Subir imagen')}

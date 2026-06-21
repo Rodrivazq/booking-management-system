@@ -206,17 +206,23 @@ export default function AuthPage() {
     return (
         <div className="auth-container">
             {/* Left Side - Hero */}
-            <div
-                className="auth-hero"
-                style={{
-                    // Composita el overlay oscuro (legibilidad) + la imagen en UNA capa:
-                    // así la imagen configurada en Configuración se ve siempre, sin que
-                    // la tapen capas hardcodeadas. Cae al fondo por defecto si no hay una.
-                    backgroundImage: `linear-gradient(135deg, rgba(15,23,42,0.82), rgba(15,23,42,0.5)), url("${settings.loginBackgroundImage || '/assets/background.png'}")`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                }}
-            >
+            <div className="auth-hero">
+                {/* Capa imagen (con desenfoque graduable). scale(1.1) evita que el
+                    blur muestre bordes transparentes en los extremos. */}
+                <div
+                    className="auth-hero-bg"
+                    style={{
+                        backgroundImage: `url("${settings.loginBackgroundImage || '/assets/background.png'}")`,
+                        filter: settings.loginBackgroundBlur ? `blur(${settings.loginBackgroundBlur}px)` : undefined,
+                    }}
+                />
+                {/* Capa de oscurecido graduable (legibilidad del texto). */}
+                <div
+                    className="auth-hero-dim"
+                    style={{
+                        background: `linear-gradient(135deg, rgba(15,23,42,${(settings.loginBackgroundDim ?? 55) / 100}), rgba(15,23,42,${((settings.loginBackgroundDim ?? 55) / 100) * 0.7}))`,
+                    }}
+                />
                 <div className="auth-hero-content">
                     <img
                         src={settings.logoUrl || '/assets/logo_real_sabor_clean.png'}

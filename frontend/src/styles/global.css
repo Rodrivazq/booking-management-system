@@ -1199,9 +1199,23 @@ p {
   /* Full height */
 }
 
-/* El fondo del hero (overlay + imagen configurable) se compone inline en
-   AuthPage.tsx para que la imagen elegida en Configuración se vea siempre.
-   Antes había dos capas ::before/::after hardcodeadas que la tapaban. */
+/* Capas del hero: imagen (con blur graduable) + oscurecido (dim graduable).
+   Se controlan inline desde AuthPage.tsx según la Configuración, para que la
+   imagen, el desenfoque y el oscurecido elegidos se vean siempre. */
+.auth-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.1);
+  z-index: -2;
+}
+
+.auth-hero-dim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
 
 .auth-hero-content {
   position: relative;

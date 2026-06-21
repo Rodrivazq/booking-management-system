@@ -46,6 +46,8 @@ export default function AdminSettingsPage() {
         welcomeTitle: settings.welcomeTitle || '',
         welcomeMessage: settings.welcomeMessage || '',
         loginBackgroundImage: settings.loginBackgroundImage || '',
+        loginBackgroundBlur: settings.loginBackgroundBlur ?? 0,
+        loginBackgroundDim: settings.loginBackgroundDim ?? 55,
         maintenanceMode: settings.maintenanceMode || false,
         announcementMessage: settings.announcementMessage || '',
         announcementType: (settings.announcementType || 'info') as AnnouncementType
@@ -148,18 +150,44 @@ export default function AdminSettingsPage() {
                                 helpText="Imagen amplia y de buena resolución. Si la dejás vacía, se usa el fondo por defecto."
                             />
 
-                            {/* Vista previa en vivo */}
+                            {/* Controles de difuminado del fondo */}
+                            <div className="grid-2">
+                                <div>
+                                    <label style={labelStyle}>Desenfoque del fondo: {formData.loginBackgroundBlur}px</label>
+                                    <input
+                                        type="range" min={0} max={20} step={1}
+                                        value={formData.loginBackgroundBlur}
+                                        onChange={e => set('loginBackgroundBlur', Number(e.target.value))}
+                                        style={{ width: '100%', accentColor: 'var(--accent)' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Oscurecido del fondo: {formData.loginBackgroundDim}%</label>
+                                    <input
+                                        type="range" min={0} max={100} step={5}
+                                        value={formData.loginBackgroundDim}
+                                        onChange={e => set('loginBackgroundDim', Number(e.target.value))}
+                                        style={{ width: '100%', accentColor: 'var(--accent)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Vista previa en vivo (refleja imagen + desenfoque + oscurecido) */}
                             <div>
                                 <label style={labelStyle}>Vista previa</label>
-                                <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', textAlign: 'center', background: formData.loginBackgroundImage ? `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url(${formData.loginBackgroundImage}) center/cover` : 'var(--bg)' }}>
-                                    {formData.logoUrl
-                                        ? <img src={formData.logoUrl} alt="logo" style={{ height: 40, objectFit: 'contain', marginBottom: '0.5rem' }} />
-                                        : null}
-                                    <div style={{ fontWeight: 700, fontSize: '1.05rem', color: formData.loginBackgroundImage ? '#fff' : 'var(--text)' }}>
-                                        {formData.welcomeTitle || formData.companyName || 'Título de bienvenida'}
-                                    </div>
-                                    <div style={{ fontSize: '0.85rem', marginTop: '0.25rem', color: formData.loginBackgroundImage ? 'rgba(255,255,255,0.85)' : 'var(--text-light)' }}>
-                                        {formData.welcomeMessage || 'Aquí se mostrará el mensaje de bienvenida.'}
+                                <div style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--radius)', minHeight: 150 }}>
+                                    <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${formData.loginBackgroundImage || '/assets/background.png'}")`, backgroundSize: 'cover', backgroundPosition: 'center', filter: formData.loginBackgroundBlur ? `blur(${formData.loginBackgroundBlur}px)` : undefined, transform: 'scale(1.1)' }} />
+                                    <div style={{ position: 'absolute', inset: 0, background: `rgba(15,23,42,${formData.loginBackgroundDim / 100})` }} />
+                                    <div style={{ position: 'relative', padding: '1.5rem', textAlign: 'center' }}>
+                                        {formData.logoUrl
+                                            ? <img src={formData.logoUrl} alt="logo" style={{ height: 44, objectFit: 'contain', marginBottom: '0.5rem' }} />
+                                            : null}
+                                        <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff' }}>
+                                            {formData.welcomeTitle || formData.companyName || 'Título de bienvenida'}
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem', marginTop: '0.25rem', color: 'rgba(255,255,255,0.85)' }}>
+                                            {formData.welcomeMessage || 'Aquí se mostrará el mensaje de bienvenida.'}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

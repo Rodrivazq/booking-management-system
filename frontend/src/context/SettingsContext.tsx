@@ -13,6 +13,8 @@ interface Settings {
     welcomeTitle: string;
     welcomeMessage: string;
     loginBackgroundImage: string;
+    loginBackgroundBlur: number;
+    loginBackgroundDim: number;
     maintenanceMode: boolean;
     announcementMessage: string;
     announcementType: 'info' | 'warning' | 'error';
@@ -36,6 +38,8 @@ const defaultSettings: Settings = {
     welcomeTitle: 'Sistema de Reservas Corporativo',
     welcomeMessage: 'Gestiona tus comidas diarias de forma eficiente. Planifica tu semana y disfruta de un servicio de comedor de primera clase.',
     loginBackgroundImage: '',
+    loginBackgroundBlur: 0,
+    loginBackgroundDim: 55,
     maintenanceMode: false,
     announcementMessage: '',
     announcementType: 'info'

@@ -49,6 +49,9 @@ model Settings {
   welcomeTitle        String?
   welcomeMessage      String?
   loginBackgroundImage String?
+  // Difuminado del fondo del login: desenfoque (px) y oscurecido (%).
+  loginBackgroundBlur Int     @default(0)
+  loginBackgroundDim  Int     @default(55)
   maintenanceMode     Boolean @default(false)
   announcementMessage String?
   announcementType    String? @default("info")
