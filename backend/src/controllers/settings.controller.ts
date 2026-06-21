@@ -36,6 +36,10 @@ export const updateSettings = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'URL de logo inválida o demasiado larga. No se permiten imágenes base64.' });
         }
 
+        if (newSettings.loginBackgroundImage !== undefined && !validateImageUrl(newSettings.loginBackgroundImage)) {
+            return res.status(400).json({ message: 'URL de imagen de fondo inválida o demasiado larga. No se permiten imágenes base64.' });
+        }
+
         const settings = await prisma.settings.upsert({
             where: { id: 1 },
             update: newSettings,
